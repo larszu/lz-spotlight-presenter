@@ -469,50 +469,6 @@ lz-spotlight-presenter/
 └── README.md
 ```
 
-Local certificates and dependencies are intentionally excluded from Git.
-
----
-
-## 🛣️ Roadmap
-
-The current implementation provides the foundation for a larger presenter-control platform.
-
-Potential future components include:
-
-* 🎤 Presenter remote controls
-* ⏭️ Presentation navigation
-* ⏱️ Presentation timer
-* 🎬 Companion integration
-* 🎛️ External hardware controllers
-* 🔌 USB HID devices
-* 📡 Wireless hardware controllers
-* 🔐 Device pairing
-* 🧩 Device capability discovery
-* 📊 Diagnostics and telemetry
-* 🎨 Additional overlay tools
-* 🖥️ PowerPoint / Keynote integration
-* 🌐 Multi-device control
-* 📱 Dedicated mobile interface
-* 🧠 Unified AV Control Protocol
-
-The long-term goal is not just a pointer application, but a reusable control platform for presentation and live-production environments.
-
----
-
-## 🤝 Contributing
-
-Contributions, ideas and improvements are welcome.
-
-The project is particularly interested in:
-
-* Live-production workflows
-* Presenter control hardware
-* Motion-control improvements
-* Overlay rendering
-* Companion integration
-* Network protocols
-* Multi-display workflows
-
 ---
 
 ## 👤 Author
@@ -526,7 +482,3 @@ Built and maintained by **Lars Zumpe**
 MIT
 
 ---
-
-## ⭐ Project
-
-[larszu/lz-spotlight-presenter](https://github.com/larszu/lz-spotlight-presenter?utm_source=chatgpt.com)
