@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Local HTTPS certificates / private keys
+server/certs/
+*.pem
+*.key
+
+# Local backups
+**/*-before-*.html
+*.bak
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*

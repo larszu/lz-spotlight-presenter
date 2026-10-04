@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Presenter Controller</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#0b0b0d;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",Arial,sans-serif}
+body{padding:24px;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+.container{max-width:620px;margin:auto}
+h1{margin:0 0 6px;font-size:30px}
+.subtitle{color:#888;margin-bottom:22px}
+.card{background:#17171a;border:1px solid #29292e;border-radius:18px;padding:18px;margin-bottom:16px}
+button{width:100%;border:0;border-radius:13px;padding:15px;margin-top:10px;font-size:17px;font-weight:600;color:#fff;background:#2b2b31}
+button.primary{background:#1677ff}
+button.danger{background:#b82b2b}
+button:disabled{opacity:.35}
+label{display:block;margin-top:17px;margin-bottom:7px;color:#aaa;font-size:14px}
+input[type=range]{width:100%}
+.value{float:right;color:#fff;font-weight:600}
+.status{padding:12px;border-radius:12px;background:#101012;color:#999;font-size:14px;margin-top:12px}
+.status.ok{color:#63df72}
+.status.error{color:#ff6666}
+.values{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.sensor{background:#101012;border-radius:10px;padding:10px;text-align:center}
+.sensor small{display:block;color:#666;margin-bottom:3px}
+.sensor strong{font-variant-numeric:tabular-nums}
+.calibration{display:none}
+.calibration.active{display:block}
+.step{font-size:22px;font-weight:700;margin:8px 0}
+.instruction{color:#aaa;line-height:1.45}
+.progress{height:8px;background:#29292e;border-radius:8px;overflow:hidden;margin-top:16px}
+.progressbar{height:100%;width:0;background:#1677ff}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Presenter Controller</h1>
+<div class="subtitle">Smartphone Presenter Prototype</div>
+
+<div class="card">
+<button id="sensorButton" class="primary">Sensor aktivieren</button>
+<div id="sensorStatus" class="status">Sensor noch nicht aktiviert.</div>
+
+<div class="values">
+<div class="sensor"><small>Alpha</small><strong id="alpha">–</strong></div>
+<div class="sensor"><small>Beta</small><strong id="beta">–</strong></div>
+<div class="sensor"><small>Gamma</small><strong id="gamma">–</strong></div>
+</div>
+</div>
+
+<div class="card">
+<label>
+Horizontal
+<span class="value" id="horizontalValue">3</span>
+</label>
+<input id="horizontalSensitivity" type="range" min="1" max="100" value="3">
+
+<label>
+Vertikal
+<span class="value" id="verticalValue">3</span>
+</label>
+<input id="verticalSensitivity" type="range" min="1" max="100" value="3">
+
+<button id="pointerButton" class="primary">Pointer aktivieren</button>
+</div>
+
+<div class="card calibration" id="calibrationCard">
+<h2>Kalibrierung</h2>
+<div class="step" id="calibrationStep">Schritt 1 / 6</div>
+<div class="instruction" id="calibrationInstruction"></div>
+
+<div class="progress">
+<div class="progressbar" id="calibrationProgress"></div>
+</div>
+
+<button id="calibrationStart" class="primary">Kalibrierung starten</button>
+<button id="calibrationNext" disabled>Weiter</button>
+<button id="calibrationCancel" class="danger">Abbrechen</button>
+</div>
+
+<div class="card">
+<button id="blackButton">BLACK</button>
+<button id="escapeButton">ESCAPE</button>
+</div>
+
+</div>
+
+<script>
+const WS_URL=`wss://${location.host}`;
+
+let socket=null;
+let sensorActive=false;
+let pointerEnabled=false;
+
+let lastAlpha=null;
+let lastBeta=null;
+let lastGamma=null;
+
+const SENSITIVITY_SCALE=0.12;
+
+const savedSettings=JSON.parse(
+  localStorage.getItem("presenterPointerSettings")||"null"
+);
+
+let horizontalSensitivity=savedSettings?.horizontal??3;
+let verticalSensitivity=savedSettings?.vertical??3;
+
+const horizontalSlider=document.getElementById("horizontalSensitivity");
+const verticalSlider=document.getElementById("verticalSensitivity");
+
+horizontalSlider.value=horizontalSensitivity;
+verticalSlider.value=verticalSensitivity;
+
+function updateSensitivity(){
+  horizontalSensitivity=Number(horizontalSlider.value);
+  verticalSensitivity=Number(verticalSlider.value);
+
+  document.getElementById("horizontalValue").textContent=horizontalSensitivity;
+  document.getElementById("verticalValue").textContent=verticalSensitivity;
+
+  localStorage.setItem(
+    "presenterPointerSettings",
+    JSON.stringify({
+      horizontal:horizontalSensitivity,
+      vertical:verticalSensitivity
+    })
+  );
+}
+
+horizontalSlider.addEventListener("input",updateSensitivity);
+verticalSlider.addEventListener("input",updateSensitivity);
+updateSensitivity();
+
+function connect(){
+  if(socket&&(socket.readyState===WebSocket.OPEN||socket.readyState===WebSocket.CONNECTING))return;
+
+  socket=new WebSocket(WS_URL);
+
+  socket.addEventListener("open",()=>{
+    console.log("WebSocket verbunden");
+  });
+
+  socket.addEventListener("close",()=>{
+    console.log("WebSocket getrennt");
+    setTimeout(connect,1500);
+  });
+
+  socket.addEventListener("error",e=>{
+    console.error("WebSocket Fehler",e);
+  });
+}
+
+connect();
+
+function send(type,payload={}){
+  if(!socket||socket.readyState!==WebSocket.OPEN)return;
+
+  socket.send(JSON.stringify({
+    type,
+    timestamp:Date.now(),
+    ...payload
+  }));
+}
+
+function normalizeAngle(angle){
+  while(angle>180)angle-=360;
+  while(angle<-180)angle+=360;
+  return angle;
+}
+
+function updateValues(alpha,beta,gamma){
+  document.getElementById("alpha").textContent=alpha.toFixed(1);
+  document.getElementById("beta").textContent=beta.toFixed(1);
+  document.getElementById("gamma").textContent=gamma.toFixed(1);
+}
+
+function orientation(event){
+  const alpha=event.alpha;
+  const beta=event.beta;
+  const gamma=event.gamma;
+
+  if(alpha===null||beta===null||gamma===null)return;
+
+  if(lastAlpha===null||lastBeta===null){
+    lastAlpha=alpha;
+    lastBeta=beta;
+    lastGamma=gamma;
+    sensorActive=true;
+    updateValues(alpha,beta,gamma);
+    return;
+  }
+
+  const deltaAlpha=normalizeAngle(alpha-lastAlpha);
+  const deltaBeta=beta-lastBeta;
+
+  lastAlpha=alpha;
+  lastBeta=beta;
+  lastGamma=gamma;
+
+  updateValues(alpha,beta,gamma);
+
+  if(pointerEnabled){
+    let dx=Math.abs(deltaAlpha)<0.05?0:deltaAlpha;
+    let dy=Math.abs(deltaBeta)<0.05?0:deltaBeta;
+
+    dx=-dx*horizontalSensitivity*SENSITIVITY_SCALE;
+    dy=-dy*verticalSensitivity*SENSITIVITY_SCALE;
+
+    if(dx!==0||dy!==0){
+      send("POINTER_MOVE",{
+        dx,dy,alpha,beta,gamma
+      });
+    }
+  }
+
+  if(calibrationActive&&calibrationStepRunning){
+    recordCalibrationSample({
+      alpha,
+      beta,
+      gamma,
+      deltaAlpha,
+      deltaBeta
+    });
+  }
+}
+
+async function enableSensor(){
+  try{
+    if(
+      typeof DeviceOrientationEvent!=="undefined" &&
+      typeof DeviceOrientationEvent.requestPermission==="function"
+    ){
+      const permission=await DeviceOrientationEvent.requestPermission();
+
+      if(permission!=="granted"){
+        throw new Error("Sensorberechtigung wurde nicht erteilt.");
+      }
+    }
+
+    window.addEventListener(
+      "deviceorientation",
+      orientation,
+      true
+    );
+
+    const status=document.getElementById("sensorStatus");
+    status.textContent="Sensor aktiviert – Smartphone bewegen.";
+    status.classList.remove("error");
+    status.classList.add("ok");
+
+    document.getElementById("sensorButton").disabled=true;
+
+    document.getElementById("calibrationCard")
+      .classList.add("active");
+
+  }catch(error){
+    console.error(error);
+
+    const status=document.getElementById("sensorStatus");
+    status.textContent=error.message||"Sensor konnte nicht aktiviert werden.";
+    status.classList.add("error");
+  }
+}
+
+document.getElementById("sensorButton")
+  .addEventListener("click",enableSensor);
+
+document.getElementById("pointerButton")
+  .addEventListener("click",()=>{
+    if(!sensorActive){
+      const status=document.getElementById("sensorStatus");
+      status.textContent="Bitte zuerst den Sensor aktivieren.";
+      status.classList.add("error");
+      return;
+    }
+
+    pointerEnabled=!pointerEnabled;
+
+    document.getElementById("pointerButton").textContent=
+      pointerEnabled
+        ?"Pointer deaktivieren"
+        :"Pointer aktivieren";
+
+    send(pointerEnabled?"POINTER_ENABLE":"POINTER_DISABLE");
+  });
+
+document.getElementById("blackButton")
+  .addEventListener("click",()=>send("BLACK"));
+
+document.getElementById("escapeButton")
+  .addEventListener("click",()=>send("ESCAPE"));
+
+
+/* KALIBRIERUNG */
+
+const calibrationSteps=[
+  {
+    title:"Nach rechts",
+    instruction:"Bewege das Smartphone langsam und gleichmäßig nach rechts.",
+    target:"RIGHT"
+  },
+  {
+    title:"Nach links",
+    instruction:"Bewege das Smartphone langsam und gleichmäßig nach links.",
+    target:"LEFT"
+  },
+  {
+    title:"Nach oben",
+    instruction:"Bewege das Smartphone langsam und gleichmäßig nach oben.",
+    target:"UP"
+  },
+  {
+    title:"Nach unten",
+    instruction:"Bewege das Smartphone langsam und gleichmäßig nach unten.",
+    target:"DOWN"
+  },
+  {
+    title:"Diagonal rechts oben",
+    instruction:"Bewege das Smartphone langsam diagonal nach rechts oben.",
+    target:"RIGHT_UP"
+  },
+  {
+    title:"Diagonal links unten",
+    instruction:"Bewege das Smartphone langsam diagonal nach links unten.",
+    target:"LEFT_DOWN"
+  }
+];
+
+let calibrationActive=false;
+let calibrationStep=0;
+let calibrationStepRunning=false;
+let calibrationSamples=[];
+let calibrationStartTime=0;
+
+const calibrationCard=document.getElementById("calibrationCard");
+const calibrationStepElement=document.getElementById("calibrationStep");
+const calibrationInstruction=document.getElementById("calibrationInstruction");
+const calibrationProgress=document.getElementById("calibrationProgress");
+const calibrationStartButton=document.getElementById("calibrationStart");
+const calibrationNextButton=document.getElementById("calibrationNext");
+const calibrationCancelButton=document.getElementById("calibrationCancel");
+
+function showCalibrationStep(){
+  const step=calibrationSteps[calibrationStep];
+
+  calibrationStepElement.textContent=
+    `Schritt ${calibrationStep+1} / ${calibrationSteps.length}: ${step.title}`;
+
+  calibrationInstruction.textContent=step.instruction;
+  calibrationProgress.style.width="0%";
+  calibrationNextButton.disabled=true;
+
+  send("CALIBRATION_STEP_START",{
+    step:calibrationStep,
+    total:calibrationSteps.length,
+    title:step.title,
+    target:step.target
+  });
+}
+
+function startCalibration(){
+  if(!sensorActive){
+    const status=document.getElementById("sensorStatus");
+    status.textContent="Bitte zuerst den Sensor aktivieren.";
+    status.classList.add("error");
+    return;
+  }
+
+  calibrationActive=true;
+  calibrationStep=0;
+  calibrationStepRunning=false;
+  calibrationSamples=[];
+
+  calibrationStartButton.disabled=true;
+
+  send("CALIBRATION_START",{
+    total:calibrationSteps.length
+  });
+
+  showCalibrationStep();
+
+  setTimeout(()=>{
+    startCalibrationStep();
+  },500);
+}
+
+function startCalibrationStep(){
+  if(!calibrationActive)return;
+
+  calibrationStepRunning=true;
+  calibrationSamples=[];
+  calibrationStartTime=performance.now();
+
+  calibrationNextButton.disabled=true;
+
+  send("CALIBRATION_TARGET",{
+    step:calibrationStep,
+    total:calibrationSteps.length,
+    target:calibrationSteps[calibrationStep].target,
+    duration:4000
+  });
+
+  const duration=4000;
+
+  function updateProgress(now){
+    if(!calibrationStepRunning)return;
+
+    const elapsed=now-calibrationStartTime;
+    const progress=Math.min(1,elapsed/duration);
+
+    calibrationProgress.style.width=
+      `${progress*100}%`;
+
+    send("CALIBRATION_PROGRESS",{
+      step:calibrationStep,
+      progress
+    });
+
+    if(progress>=1){
+      finishCalibrationStep();
+      return;
+    }
+
+    requestAnimationFrame(updateProgress);
+  }
+
+  requestAnimationFrame(updateProgress);
+}
+
+function recordCalibrationSample(sample){
+  calibrationSamples.push({
+    ...sample,
+    time:performance.now()
+  });
+}
+
+function finishCalibrationStep(){
+  if(!calibrationStepRunning)return;
+
+  calibrationStepRunning=false;
+
+  calibrationProgress.style.width="100%";
+
+  send("CALIBRATION_STEP_COMPLETE",{
+    step:calibrationStep,
+    total:calibrationSteps.length,
+    sampleCount:calibrationSamples.length
+  });
+
+  calibrationNextButton.disabled=false;
+}
+
+function nextCalibrationStep(){
+  if(!calibrationActive||calibrationStepRunning)return;
+
+  calibrationStep++;
+
+  if(calibrationStep>=calibrationSteps.length){
+    finishCalibration();
+    return;
+  }
+
+  showCalibrationStep();
+
+  setTimeout(()=>{
+    startCalibrationStep();
+  },500);
+}
+
+function finishCalibration(){
+  calibrationActive=false;
+  calibrationStepRunning=false;
+
+  const profile={
+    version:6,
+    timestamp:new Date().toISOString(),
+    steps:calibrationSteps.map((step,index)=>({
+      index,
+      target:step.target
+    }))
+  };
+
+  localStorage.setItem(
+    "presenterCalibrationProfile",
+    JSON.stringify(profile)
+  );
+
+  send("CALIBRATION_RESULT",{
+    profile
+  });
+
+  calibrationStepElement.textContent="Kalibrierung abgeschlossen";
+  calibrationInstruction.textContent=
+    "Alle sechs Bewegungen wurden aufgezeichnet.";
+  calibrationNextButton.disabled=true;
+  calibrationStartButton.disabled=false;
+}
+
+function cancelCalibration(){
+  calibrationActive=false;
+  calibrationStepRunning=false;
+
+  calibrationProgress.style.width="0%";
+
+  calibrationStartButton.disabled=false;
+  calibrationNextButton.disabled=true;
+
+  send("CALIBRATION_CANCEL");
+
+  calibrationStepElement.textContent="Kalibrierung";
+  calibrationInstruction.textContent=
+    "Kalibrierung abgebrochen.";
+}
+
+calibrationStartButton
+  .addEventListener("click",startCalibration);
+
+calibrationNextButton
+  .addEventListener("click",nextCalibrationStep);
+
+calibrationCancelButton
+  .addEventListener("click",cancelCalibration);
+
+</script>
+</body>
+</html>

@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Presenter Overlay</title>
+
+<style>
+*{box-sizing:border-box}
+
+html,body{
+  margin:0;
+  padding:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:transparent;
+  color:#fff;
+  font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
+}
+
+body{
+  pointer-events:none;
+}
+
+#pointer{
+  position:fixed;
+  left:50%;
+  top:50%;
+  width:30px;
+  height:30px;
+  border-radius:50%;
+  background:#ff1e1e;
+  border:3px solid:#fff;
+  box-shadow:
+    0 0 8px rgba(255,0,0,.9),
+    0 0 22px rgba(255,0,0,.6);
+  transform:translate(-50%,-50%);
+  z-index:1000;
+  display:none;
+}
+
+#pointer.enabled{
+  display:block;
+}
+
+#black{
+  position:fixed;
+  inset:0;
+  background:#000;
+  z-index:900;
+  display:none;
+}
+
+#calibration{
+  position:fixed;
+  inset:0;
+  z-index:2000;
+  display:none;
+  background:rgba(0,0,0,.96);
+  pointer-events:none;
+}
+
+#calibration.active{
+  display:block;
+}
+
+#calibrationHeader{
+  position:absolute;
+  top:30px;
+  left:40px;
+  right:40px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:24px;
+  font-weight:600;
+}
+
+#calibrationStatus{
+  color:#aaa;
+  font-size:18px;
+  font-weight:400;
+}
+
+#target{
+  position:absolute;
+  width:70px;
+  height:70px;
+  border:5px solid #fff;
+  border-radius:50%;
+  transform:translate(-50%,-50%);
+  box-shadow:
+    0 0 20px rgba(255,255,255,.8),
+    inset 0 0 15px rgba(255,255,255,.25);
+}
+
+#target::before,
+#target::after{
+  content:"";
+  position:absolute;
+  background:#fff;
+}
+
+#target::before{
+  width:120px;
+  height:4px;
+  left:-30px;
+  top:28px;
+}
+
+#target::after{
+  width:4px;
+  height:120px;
+  left:28px;
+  top:-30px;
+}
+
+#progressContainer{
+  position:absolute;
+  left:40px;
+  right:40px;
+  bottom:40px;
+  height:10px;
+  background:#333;
+  border-radius:10px;
+  overflow:hidden;
+}
+
+#progress{
+  width:0%;
+  height:100%;
+  background:#1677ff;
+  transition:width .08s linear;
+}
+
+#connection{
+  position:fixed;
+  top:15px;
+  right:15px;
+  z-index:3000;
+  width:12px;
+  height:12px;
+  border-radius:50%;
+  background:#ff3333;
+  box-shadow:0 0 10px rgba(255,0,0,.7);
+}
+
+#connection.connected{
+  background:#40e060;
+  box-shadow:0 0 10px rgba(0,255,60,.7);
+}
+</style>
+</head>
+
+<body>
+
+<div id="connection"></div>
+
+<div id="black"></div>
+
+<div id="pointer"></div>
+
+<div id="calibration">
+
+  <div id="calibrationHeader">
+    <div id="calibrationTitle">
+      Kalibrierung
+    </div>
+
+    <div id="calibrationStatus">
+      Verbinde Controller …
+    </div>
+  </div>
+
+  <div id="target"></div>
+
+  <div id="progressContainer">
+    <div id="progress"></div>
+  </div>
+
+</div>
+
+<script>
+const socketUrl=`wss://${location.host}`;
+
+let socket=null;
+
+let pointerX=window.innerWidth/2;
+let pointerY=window.innerHeight/2;
+
+const POINTER_SCALE=32;
+
+let calibrationActive=false;
+let calibrationStep=0;
+let calibrationTotal=6;
+let calibrationTarget="";
+
+const pointer=document.getElementById("pointer");
+const black=document.getElementById("black");
+const calibration=document.getElementById("calibration");
+const target=document.getElementById("target");
+const progress=document.getElementById("progress");
+const calibrationTitle=document.getElementById("calibrationTitle");
+const calibrationStatus=document.getElementById("calibrationStatus");
+const connection=document.getElementById("connection");
+
+function clamp(value,min,max){
+  return Math.max(min,Math.min(max,value));
+}
+
+function updatePointer(){
+  pointerX=clamp(
+    pointerX,
+    0,
+    window.innerWidth
+  );
+
+  pointerY=clamp(
+    pointerY,
+    0,
+    window.innerHeight
+  );
+
+  pointer.style.left=`${pointerX}px`;
+  pointer.style.top=`${pointerY}px`;
+}
+
+function centerPointer(){
+  pointerX=window.innerWidth/2;
+  pointerY=window.innerHeight/2;
+  updatePointer();
+}
+
+function movePointer(dx,dy){
+  pointerX+=dx*POINTER_SCALE;
+  pointerY+=dy*POINTER_SCALE;
+  updatePointer();
+}
+
+function setCalibrationTarget(type){
+  const marginX=window.innerWidth*.12;
+  const marginY=window.innerHeight*.16;
+
+  let x=window.innerWidth/2;
+  let y=window.innerHeight/2;
+
+  switch(type){
+
+    case "RIGHT":
+      x=window.innerWidth-marginX;
+      y=window.innerHeight/2;
+      break;
+
+    case "LEFT":
+      x=marginX;
+      y=window.innerHeight/2;
+      break;
+
+    case "UP":
+      x=window.innerWidth/2;
+      y=marginY;
+      break;
+
+    case "DOWN":
+      x=window.innerWidth/2;
+      y=window.innerHeight-marginY;
+      break;
+
+    case "RIGHT_UP":
+      x=window.innerWidth-marginX;
+      y=marginY;
+      break;
+
+    case "LEFT_DOWN":
+      x=marginX;
+      y=window.innerHeight-marginY;
+      break;
+  }
+
+  target.style.left=`${x}px`;
+  target.style.top=`${y}px`;
+}
+
+function showCalibration(step,total,title,targetType){
+  calibrationActive=true;
+  calibrationStep=step;
+  calibrationTotal=total;
+  calibrationTarget=targetType;
+
+  calibration.classList.add("active");
+
+  calibrationTitle.textContent=
+    `Kalibrierung – Schritt ${step+1} / ${total}`;
+
+  calibrationStatus.textContent=title;
+
+  progress.style.width="0%";
+
+  setCalibrationTarget(targetType);
+}
+
+function hideCalibration(){
+  calibrationActive=false;
+  calibration.classList.remove("active");
+  progress.style.width="0%";
+}
+
+function connect(){
+  socket=new WebSocket(socketUrl);
+
+  socket.addEventListener("open",()=>{
+    connection.classList.add("connected");
+    calibrationStatus.textContent="Controller verbunden";
+    console.log("Overlay WebSocket verbunden");
+  });
+
+  socket.addEventListener("close",()=>{
+    connection.classList.remove("connected");
+
+    setTimeout(connect,1500);
+  });
+
+  socket.addEventListener("error",error=>{
+    console.error("Overlay WebSocket Fehler:",error);
+  });
+
+  socket.addEventListener("message",event=>{
+    let message;
+
+    try{
+      message=JSON.parse(event.data);
+    }catch{
+      return;
+    }
+
+    handleMessage(message);
+  });
+}
+
+function handleMessage(message){
+
+  switch(message.type){
+
+    case "POINTER_ENABLE":
+      pointer.classList.add("enabled");
+      break;
+
+    case "POINTER_DISABLE":
+      pointer.classList.remove("enabled");
+      break;
+
+    case "POINTER_MOVE":
+      movePointer(
+        Number(message.dx)||0,
+        Number(message.dy)||0
+      );
+      break;
+
+    case "POINTER_RESET":
+      centerPointer();
+      break;
+
+    case "BLACK":
+      black.style.display="block";
+      break;
+
+    case "ESCAPE":
+      black.style.display="none";
+      break;
+
+    case "CALIBRATION_START":
+      showCalibration(
+        0,
+        message.total||6,
+        "Kalibrierung wird gestartet",
+        "RIGHT"
+      );
+      break;
+
+    case "CALIBRATION_STEP_START":
+      showCalibration(
+        message.step||0,
+        message.total||6,
+        message.title||"Bewegung",
+        message.target||"RIGHT"
+      );
+      break;
+
+    case "CALIBRATION_TARGET":
+      calibrationActive=true;
+      calibration.classList.add("active");
+
+      calibrationTitle.textContent=
+        `Kalibrierung – Schritt ${(message.step||0)+1} / ${message.total||6}`;
+
+      calibrationStatus.textContent=
+        "Bewege das Smartphone langsam";
+
+      setCalibrationTarget(
+        message.target||"RIGHT"
+      );
+
+      progress.style.width="0%";
+      break;
+
+    case "CALIBRATION_PROGRESS":
+      progress.style.width=
+        `${clamp((message.progress||0)*100,0,100)}%`;
+      break;
+
+    case "CALIBRATION_STEP_COMPLETE":
+      progress.style.width="100%";
+      calibrationStatus.textContent=
+        "Schritt abgeschlossen – auf dem Handy Weiter drücken";
+      break;
+
+    case "CALIBRATION_RESULT":
+      calibrationStatus.textContent=
+        "Kalibrierung abgeschlossen";
+      progress.style.width="100%";
+
+      setTimeout(()=>{
+        hideCalibration();
+      },1200);
+      break;
+
+    case "CALIBRATION_CANCEL":
+      hideCalibration();
+      break;
+
+    case "MODE_CHANGE":
+      console.log("MODE_CHANGE",message);
+      break;
+
+    default:
+      console.log("Overlay message:",message);
+  }
+}
+
+window.addEventListener("resize",()=>{
+  updatePointer();
+
+  if(calibrationActive){
+    setCalibrationTarget(calibrationTarget);
+  }
+});
+
+centerPointer();
+connect();
+</script>
+
+</body>
+</html>
