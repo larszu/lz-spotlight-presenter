@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "LZ Spotlight",
+    "slug": "lz-spotlight-presenter",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "de.zumpelars.spotlightpresenter",
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "Verbindet sich mit der LZ-Spotlight-Desktop-App im selben WLAN.",
+        "NSMotionUsageDescription": "Der Bewegungssensor steuert Laserpointer und Spotlight.",
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        }
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0b0b0d",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "de.zumpelars.spotlightpresenter"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Zum Scannen des QR-Codes der Desktop-App.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ]
+    ],
+    "scheme": "lzspot",
+    "backgroundColor": "#0b0b0d"
+  }
+}

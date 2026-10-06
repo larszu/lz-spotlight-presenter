@@ -17,3 +17,7 @@ server/certs/
 # Logs
 *.log
 npm-debug.log*
+
+# Builds
+desktop/dist/
+mobile/.expo/

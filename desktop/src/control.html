@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>LZ Spotlight Presenter</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:20px;background:#0b0b0d;color:#f2f2f2;font:14px -apple-system,"Segoe UI",system-ui,sans-serif}
+h1{font-size:20px;margin:0 0 4px}
+.sub{color:#8a8a92;margin-bottom:16px}
+.card{background:#17171a;border:1px solid #29292e;border-radius:14px;padding:16px;margin-bottom:12px}
+.qr{display:flex;gap:16px;align-items:center}
+.qr img{width:150px;height:150px;border-radius:8px;background:#fff}
+.code{font-size:30px;font-weight:700;letter-spacing:4px;font-variant-numeric:tabular-nums}
+.muted{color:#8a8a92}
+.ok{color:#5fd16d}.warn{color:#ffb547}
+select,button{font:inherit;color:#fff;background:#2b2b31;border:0;border-radius:9px;padding:9px 12px}
+select{width:100%}
+button{cursor:pointer}
+button.primary{background:#1677ff}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+code{background:#101012;padding:2px 6px;border-radius:5px;font-size:12px;word-break:break-all}
+label{display:block;margin-bottom:6px;color:#aaa}
+</style>
+</head>
+<body>
+<h1>LZ Spotlight Presenter</h1>
+<div class="sub">Handy-App öffnen und QR-Code scannen.</div>
+
+<div class="card qr">
+  <img id="qr" alt="QR-Code">
+  <div>
+    <div class="muted">Verbindungscode</div>
+    <div class="code" id="token">––––––</div>
+    <div class="muted" id="addr"></div>
+    <div class="row"><button id="newToken">Neuer Code</button></div>
+  </div>
+</div>
+
+<div class="card">
+  <div id="clients" class="muted">Kein Handy verbunden.</div>
+  <div id="access"></div>
+</div>
+
+<div class="card">
+  <label for="display">Overlay auf</label>
+  <select id="display"></select>
+  <div class="row">
+    <button id="tLaser">Laser testen</button>
+    <button id="tSpot">Spotlight testen</button>
+  </div>
+</div>
+
+<div class="card">
+  <label>Bitfocus Companion / Stream Deck (Generic HTTP)</label>
+  <code id="api"></code>
+  <div class="muted" style="margin-top:6px">Befehle: next, prev, black, white, escape, start, laser, spotlight, off</div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let testTimer;
+
+function render(s) {
+  $("qr").src = s.qr;
+  $("token").textContent = s.token;
+  $("addr").textContent = s.ips.length ? s.ips.map((ip) => `${ip}:${s.port}`).join(" · ") : "Kein Netzwerk gefunden";
+  $("api").textContent = `http://${s.ips[0] || "IP"}:${s.port}/api/next?token=${s.token}`;
+  $("clients").innerHTML = s.clients.length
+    ? `<span class="ok">● Verbunden:</span> ${s.clients.map((c) => c.replace(/</g, "&lt;")).join(", ")}`
+    : "Kein Handy verbunden.";
+  $("access").innerHTML = s.accessibility ? "" :
+    `<div class="row"><span class="warn">Folien weiterschalten braucht die Freigabe „Bedienungshilfen“.</span>
+     <button class="primary" id="grant">Freigabe öffnen</button></div>`;
+  if (!s.accessibility) $("grant").onclick = () => window.lz.askAccessibility();
+  const sel = $("display");
+  if (document.activeElement !== sel) {
+    sel.innerHTML = s.displays.map((d) => `<option value="${d.id}">${d.label}</option>`).join("");
+    sel.value = String(s.displayId);
+  }
+}
+
+function test(mode) {
+  clearTimeout(testTimer);
+  window.lz.test({ type: "mode", mode });
+  testTimer = setTimeout(() => window.lz.test({ type: "mode", mode: "off" }), 2500);
+}
+
+$("display").onchange = (e) => window.lz.setDisplay(e.target.value);
+$("newToken").onclick = () => window.lz.newToken();
+$("tLaser").onclick = () => test("laser");
+$("tSpot").onclick = () => test("spotlight");
+window.lz.onState(render);
+window.lz.getState().then(render);
+</script>
+</body>
+</html>
