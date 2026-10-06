@@ -55,7 +55,14 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "larszu",
+        "repo": "lz-spotlight-presenter"
+      }
+    ]
   },
   "allowScripts": {
     "electron@44.5.1": true,
