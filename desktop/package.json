@@ -1,0 +1,64 @@
+{
+  "name": "lz-spotlight-presenter",
+  "productName": "LZ Spotlight Presenter",
+  "version": "1.0.0",
+  "description": "Desktop receiver for the LZ Spotlight Presenter phone remote: laser pointer and spotlight overlay plus slide control",
+  "author": "Lars Zumpe",
+  "license": "MIT",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.js",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "electron": "^44.5.1",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "de.zumpelars.spotlight-presenter",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "extendInfo": {
+        "LSUIElement": false,
+        "NSAppleEventsUsageDescription": "Sendet Pfeiltasten an die laufende Präsentation."
+      }
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "allowScripts": {
+    "electron@44.5.1": true,
+    "electron-winstaller@5.4.0": true
+  }
+}

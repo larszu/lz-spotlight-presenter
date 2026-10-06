@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}
+canvas{position:fixed;inset:0;width:100%;height:100%}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const c = document.getElementById("c");
+const ctx = c.getContext("2d");
+let target = { mode: "off", x: 0.5, y: 0.5 };
+let pos = { x: 0.5, y: 0.5 };
+let fade = 0; // 0..1 visibility for soft in/out
+let shownMode = "off";
+const trail = [];
+
+function resize() {
+  c.width = innerWidth * devicePixelRatio;
+  c.height = innerHeight * devicePixelRatio;
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+}
+addEventListener("resize", resize);
+resize();
+
+window.lz.onPointer((p) => {
+  if (target.mode === "off" && p.mode !== "off") {
+    pos = { x: p.x, y: p.y };
+    trail.length = 0;
+  }
+  target = p;
+  if (p.mode !== "off") shownMode = p.mode;
+});
+
+function frame() {
+  const W = innerWidth, H = innerHeight;
+  // Light smoothing hides sensor jitter without adding noticeable lag.
+  pos.x += (target.x - pos.x) * 0.45;
+  pos.y += (target.y - pos.y) * 0.45;
+  fade += ((target.mode === "off" ? 0 : 1) - fade) * 0.25;
+  const x = pos.x * W, y = pos.y * H;
+  ctx.clearRect(0, 0, W, H);
+
+  if (fade > 0.01 && shownMode === "spotlight") {
+    const r = Math.min(W, H) * 0.16;
+    ctx.save();
+    ctx.globalAlpha = fade;
+    ctx.fillStyle = "rgba(0,0,0,0.78)";
+    ctx.beginPath();
+    ctx.rect(0, 0, W, H);
+    ctx.arc(x, y, r, 0, Math.PI * 2, true);
+    ctx.fill("evenodd");
+    const g = ctx.createRadialGradient(x, y, r * 0.85, x, y, r * 1.08);
+    g.addColorStop(0, "rgba(0,0,0,0)");
+    g.addColorStop(1, "rgba(0,0,0,0.78)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 1.08, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  if (fade > 0.01 && shownMode === "laser") {
+    trail.push({ x, y });
+    if (trail.length > 10) trail.shift();
+    ctx.save();
+    ctx.globalAlpha = fade;
+    for (let i = 0; i < trail.length; i++) {
+      const t = trail[i], k = (i + 1) / trail.length;
+      ctx.fillStyle = `rgba(255,40,40,${0.25 * k})`;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, 9 * k, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    const glow = ctx.createRadialGradient(x, y, 0, x, y, 34);
+    glow.addColorStop(0, "rgba(255,60,60,0.9)");
+    glow.addColorStop(0.35, "rgba(255,0,0,0.45)");
+    glow.addColorStop(1, "rgba(255,0,0,0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(x, y, 34, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  } else if (target.mode === "off") {
+    trail.length = 0;
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
