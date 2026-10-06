@@ -2,12 +2,20 @@ export type Target = { host: string; port: number; token: string; name?: string 
 
 export const DEFAULT_PORT = 8787;
 
-// Accepts the desktop QR payload: lzspot://connect?host=..&port=..&token=..&name=..
+// Accepts the desktop QR payload http://<host>:<port>/pair?token=..&name=..
+// and the deep link lzspot://connect?host=..&port=..&token=..&name=..
 export function parseLink(text: string): Target | null {
-  const m = /^lzspot:\/\/connect\?(.+)$/.exec(text.trim());
-  if (!m) return null;
+  const t = text.trim();
+  const http = /^https?:\/\/([^/:?#]+)(?::(\d+))?\/pair\?(.+)$/.exec(t);
+  const deep = /^lzspot:\/\/connect\?(.+)$/.exec(t);
+  const query = http ? http[3] : deep ? deep[1] : null;
+  if (query === null) return null;
   const q: Record<string, string> = {};
-  for (const pair of m[1].split("&")) {
+  if (http) {
+    q.host = http[1];
+    q.port = http[2] || "";
+  }
+  for (const pair of query.split("&")) {
     const [k, v = ""] = pair.split("=");
     q[k] = decodeURIComponent(v);
   }

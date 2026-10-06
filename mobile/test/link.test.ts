@@ -11,8 +11,18 @@ test("parses the desktop QR link", () => {
   });
 });
 
+test("parses the http link the system camera also understands", () => {
+  assert.deepStrictEqual(parseLink("http://192.168.0.134:8787/pair?token=757604&name=MBP"), {
+    host: "192.168.0.134",
+    port: 8787,
+    token: "757604",
+    name: "MBP"
+  });
+});
+
 test("rejects foreign or broken codes", () => {
   assert.strictEqual(parseLink("https://example.com"), null);
+  assert.strictEqual(parseLink("http://example.com/other?token=123456"), null);
   assert.strictEqual(parseLink("lzspot://connect?host=1.2.3.4&token=12"), null);
   assert.strictEqual(parseLink("lzspot://connect?token=123456"), null);
 });

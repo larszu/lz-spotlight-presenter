@@ -98,7 +98,8 @@ function handleMessage(msg) {
 async function controlState() {
   const ips = lanAddresses();
   const host = ips[0] || "127.0.0.1";
-  const link = `lzspot://connect?host=${host}&port=${PORT}&token=${config.token}&name=${encodeURIComponent(os.hostname())}`;
+  // Plain http so the iPhone/Android camera opens it too; the app scanner reads it directly.
+  const link = `http://${host}:${PORT}/pair?token=${config.token}&name=${encodeURIComponent(os.hostname())}`;
   return {
     ips,
     port: PORT,
