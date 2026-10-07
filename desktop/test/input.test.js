@@ -23,6 +23,12 @@ test("relative mouse move reaches the system cursor", { skip: !enabled }, async 
   const input = require("../src/input");
   input.warmUp();
   await new Promise((r) => setTimeout(r, 12000)); // first start: PowerShell compiles the C# wrapper
+  if (process.platform === "win32") {
+    // The CI runner has no mouse; its cursor ignores relative moves until it
+    // has been placed once.
+    execFileSync("powershell.exe", ["-NoProfile", "-Command",
+      "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(300,300)"]);
+  }
   const a = cursor();
   input.move(-40, -30);
   await new Promise((r) => setTimeout(r, 1000));
