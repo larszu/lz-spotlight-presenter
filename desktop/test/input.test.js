@@ -30,5 +30,5 @@ test("relative mouse move reaches the system cursor", { skip: !enabled }, async 
   input.move(40, 30);
   await new Promise((r) => setTimeout(r, 500));
   input.stopInput();
-  assert.ok(b.x < a.x && b.y < a.y, `cursor did not move: ${JSON.stringify({ a, b })}`);
+  assert.ok(b.x < a.x && b.y < a.y, `cursor did not move: ${JSON.stringify({ a, b })} helper: ${input.lastError()}`);
 });

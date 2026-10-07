@@ -136,6 +136,7 @@ while ($true) {
 const WIN_BTN = { left: [0x02, 0x04], right: [0x08, 0x10] };
 
 let helper = null;
+let lastError = "";
 
 function start() {
   if (helper && helper.exitCode === null && !helper.killed) return helper;
@@ -153,7 +154,10 @@ function start() {
   } else {
     return null;
   }
-  helper.stderr.on("data", (d) => console.error("[input]", String(d).trim()));
+  helper.stderr.on("data", (d) => {
+    lastError = String(d).trim();
+    console.error("[input]", lastError);
+  });
   helper.stdin.on("error", () => {});
   return helper;
 }
@@ -211,4 +215,4 @@ function stopInput() {
   if (helper) helper.kill();
 }
 
-module.exports = { KEYS, key, move, button, scroll, text, stopInput };
+module.exports = { KEYS, key, move, button, scroll, text, stopInput, lastError: () => lastError };
