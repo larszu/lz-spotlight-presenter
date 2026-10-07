@@ -7,7 +7,7 @@ const { createPointer, applyMove, setMode, randomToken, randomSecret } = require
 const { lanAddresses } = require("./net");
 const { startTunnel } = require("./tunnel");
 const { startServer } = require("./server");
-const { sendKey, stopKeys } = require("./keys");
+const input = require("./input");
 
 const PORT = 8787;
 const configPath = () => path.join(app.getPath("userData"), "config.json");
@@ -85,7 +85,19 @@ function handleMessage(msg) {
       pushPointer();
       break;
     case "key":
-      sendKey(msg.action);
+      input.key(msg.action);
+      break;
+    case "mouse":
+      input.move(Number(msg.dx), Number(msg.dy));
+      break;
+    case "button":
+      input.button(msg.button, msg.phase);
+      break;
+    case "scroll":
+      input.scroll(Number(msg.dy), Number(msg.dx) || 0);
+      break;
+    case "text":
+      input.text(msg.text);
       break;
   }
 }
@@ -200,6 +212,6 @@ app.whenReady().then(() => {
 });
 
 app.on("before-quit", () => {
-  stopKeys();
+  input.stopInput();
   if (tunnelCtl) tunnelCtl.stop();
 });
