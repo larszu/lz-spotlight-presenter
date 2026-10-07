@@ -21,19 +21,12 @@ function cursor() {
 
 test("relative mouse move reaches the system cursor", { skip: !enabled }, async () => {
   const input = require("../src/input");
-  input.move(0, 0);
-  await new Promise((r) => setTimeout(r, 4000)); // helper start-up (PowerShell compiles C#)
+  input.warmUp();
+  await new Promise((r) => setTimeout(r, 12000)); // first start: PowerShell compiles the C# wrapper
   const a = cursor();
-  if (process.platform === "win32") {
-    // Can this session move the cursor at all? (Service sessions cannot.)
-    execFileSync("powershell.exe", ["-NoProfile", "-Command",
-      "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(300,300)"]);
-    console.log("direct SetCursorPos ->", JSON.stringify(cursor()));
-  }
   input.move(-40, -30);
   await new Promise((r) => setTimeout(r, 1000));
   const b = cursor();
-  console.log("helper stderr:", input.lastError());
   input.move(40, 30);
   await new Promise((r) => setTimeout(r, 500));
   input.stopInput();

@@ -199,6 +199,8 @@ app.whenReady().then(() => {
       refreshControl();
     }
   });
+  // Start the input helper now; on Windows its first start takes seconds.
+  input.warmUp();
   createOverlay();
   createControl();
   for (const ev of ["display-added", "display-removed", "display-metrics-changed"]) {

@@ -218,4 +218,4 @@ function stopInput() {
   if (helper) helper.kill();
 }
 
-module.exports = { KEYS, key, move, button, scroll, text, stopInput, lastError: () => lastError };
+module.exports = { KEYS, warmUp: start, key, move, button, scroll, text, stopInput, lastError: () => lastError };
