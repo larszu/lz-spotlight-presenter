@@ -1,6 +1,7 @@
 // Pure pointer/protocol logic, shared by main process and tests.
 
-const MODES = ["off", "laser", "spotlight"];
+// "mouse": the phone aims the real mouse cursor instead of an overlay pointer.
+const MODES = ["off", "laser", "spotlight", "mouse"];
 const ACTIONS = ["next", "prev", "black", "white", "escape", "start"];
 
 function createPointer() {

@@ -74,11 +74,43 @@ function pushPointer() {
   if (overlayWin && !overlayWin.isDestroyed()) overlayWin.webContents.send("pointer", pointer);
 }
 
+// macOS drops injected mouse and key events silently without the
+// Accessibility permission. An unsigned app loses it with every update even
+// though the switch in System Settings still looks on.
+function inputAllowed() {
+  return process.platform !== "darwin" || systemPreferences.isTrustedAccessibilityClient(false);
+}
+
+let askedAccessibility = false;
+function checkInput() {
+  if (inputAllowed()) return true;
+  if (!askedAccessibility) {
+    askedAccessibility = true;
+    systemPreferences.isTrustedAccessibilityClient(true);
+  }
+  return false;
+}
+
+let lastInputState = null;
+function publishInputState() {
+  const ok = inputAllowed();
+  if (ok === lastInputState) return;
+  lastInputState = ok;
+  server.broadcast({ type: "status", input: ok });
+}
+
 function handleMessage(msg) {
+  if (["key", "mouse", "button", "scroll", "text"].includes(msg.type) || (msg.type === "mode" && msg.mode === "mouse")) checkInput();
   switch (msg.type) {
     case "move":
-      applyMove(pointer, Number(msg.dx), Number(msg.dy));
-      pushPointer();
+      if (pointer.mode === "mouse") {
+        // Same motion as the laser, but on the system cursor.
+        const { width, height } = targetDisplay().bounds;
+        input.move(Number(msg.dx) * width, Number(msg.dy) * height);
+      } else {
+        applyMove(pointer, Number(msg.dx), Number(msg.dy));
+        pushPointer();
+      }
       break;
     case "mode":
       setMode(pointer, msg.mode);
@@ -124,7 +156,7 @@ async function controlState() {
     })),
     displayId: targetDisplay().id,
     platform: process.platform,
-    accessibility: process.platform !== "darwin" || systemPreferences.isTrustedAccessibilityClient(false)
+    accessibility: inputAllowed()
   };
 }
 
@@ -180,6 +212,7 @@ app.whenReady().then(() => {
   server = startServer({
     port: PORT,
     getKeys: () => ({ code: config.token, secret: config.secret }),
+    getStatus: () => ({ input: inputAllowed() }),
     onMessage: handleMessage,
     onClients: (list) => {
       clients = list;
@@ -210,7 +243,10 @@ app.whenReady().then(() => {
     });
   }
   // Accessibility can be granted while the app runs.
-  setInterval(refreshControl, 3000);
+  setInterval(() => {
+    refreshControl();
+    publishInputState();
+  }, 3000);
 });
 
 app.on("before-quit", () => {

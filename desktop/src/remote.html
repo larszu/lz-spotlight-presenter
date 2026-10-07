@@ -21,10 +21,10 @@ header{display:flex;align-items:center;gap:10px;min-height:32px}
 main{flex:1;display:flex;flex-direction:column;gap:12px;margin-top:12px;min-height:0}
 .row{display:flex;gap:12px}
 .big{flex:1.3}.nav{flex:1}
-.pad{flex:1;border:0;border-radius:22px;color:#fff;font-size:24px;font-weight:700;touch-action:none;
+.pad{flex:1 1 0;min-width:0;border:0;border-radius:22px;color:#fff;font-size:24px;font-weight:700;touch-action:none;
   display:flex;flex-direction:column;align-items:center;justify-content:center;transition:transform .08s,opacity .08s}
 .pad small{font-size:13px;font-weight:400;margin-top:6px;opacity:.8;padding:0 8px;text-align:center}
-.laser{background:#c62828}.spot{background:#f5a623;color:#111}
+.laser{background:#c62828}.spot{background:#f5a623;color:#111}.mouse{background:#2e7d5b}
 .pad.on{opacity:.7;transform:scale(.97)}
 .prev{flex:1;background:#2b2b31;font-size:64px;font-weight:300}
 .next{flex:2;background:#1677ff;font-size:64px;font-weight:300}
@@ -39,7 +39,7 @@ h1{font-size:26px;margin:0 0 6px}
 .set button{padding:8px 16px}
 .val{width:44px;text-align:center}
 .tabs{display:flex;gap:6px;margin-top:10px}.tabs button{flex:1;padding:10px}.tabs button.on{background:#1677ff}
-.mini{flex:0 0 64px}.mini .pad{font-size:17px}.mini .pad small{display:none}
+.mini{flex:0 0 64px}.mini .pad{font-size:14px;padding:0 2px}.mini .pad small{display:none}
 .mini .prev,.mini .next{font-size:38px}
 #pad{flex:1;border-radius:22px;background:#17171a;border:1px solid #2b2b31;touch-action:none;display:flex;
   align-items:center;justify-content:center;color:#55555c;font-size:14px;text-align:center;padding:20px}
@@ -79,6 +79,12 @@ h1{font-size:26px;margin:0 0 6px}
   <button data-tab="track">Trackpad</button>
 </nav>
 
+<div id="inputBanner" class="banner hidden">
+  Maus und Tastatur sind am Mac noch nicht freigegeben. Am Mac: Systemeinstellungen → Datenschutz &amp; Sicherheit →
+  Bedienungshilfen → <b>LZ Spotlight Presenter</b> einschalten. Steht der Schalter schon auf an (nach einem Update):
+  Eintrag mit „–“ entfernen, App neu starten und erneut erlauben.
+</div>
+
 <div id="motionBanner" class="banner hidden">
   <span id="motionText"></span>
   <button class="primary hidden" id="motionBtn" style="width:100%">Bewegungssensor erlauben</button>
@@ -88,6 +94,7 @@ h1{font-size:26px;margin:0 0 6px}
   <div class="row big">
     <button class="pad laser" data-mode="laser">Laser<small class="hint"></small></button>
     <button class="pad spot" data-mode="spotlight">Spotlight<small class="hint"></small></button>
+    <button class="pad mouse" data-mode="mouse">Maus<small class="hint"></small></button>
   </div>
   <div class="row nav">
     <button class="pad prev" data-key="prev">‹</button>
@@ -104,6 +111,7 @@ h1{font-size:26px;margin:0 0 6px}
   <div class="row mini">
     <button class="pad laser" data-mode="laser">Laser<small class="hint"></small></button>
     <button class="pad spot" data-mode="spotlight">Spotlight<small class="hint"></small></button>
+    <button class="pad mouse" data-mode="mouse">Maus<small class="hint"></small></button>
     <button class="pad prev" data-key="prev">‹</button>
     <button class="pad next" data-key="next">›</button>
   </div>
@@ -155,6 +163,7 @@ function connect() {
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
     if (msg.type === "welcome") { connected = true; setStatus("Verbunden mit " + msg.host, true); show(tab); }
+    if ("input" in msg) $("inputBanner").classList.toggle("hidden", msg.input !== false);
     if (msg.type === "error") { key = ""; store.set("lzspot.key", ""); }
   };
   ws.onclose = () => {
