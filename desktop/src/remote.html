@@ -38,6 +38,14 @@ h1{font-size:26px;margin:0 0 6px}
 .set{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #222}
 .set button{padding:8px 16px}
 .val{width:44px;text-align:center}
+.tabs{display:flex;gap:6px;margin-top:10px}.tabs button{flex:1;padding:10px}.tabs button.on{background:#1677ff}
+.mini{flex:0 0 64px}.mini .pad{font-size:17px}.mini .pad small{display:none}
+.mini .prev,.mini .next{font-size:38px}
+#pad{flex:1;border-radius:22px;background:#17171a;border:1px solid #2b2b31;touch-action:none;display:flex;
+  align-items:center;justify-content:center;color:#55555c;font-size:14px;text-align:center;padding:20px}
+#pad.drag{border-color:#1677ff}
+#kbd{position:absolute;opacity:0;pointer-events:none;height:1px;width:1px;left:0;bottom:0}
+#special{display:flex;gap:6px;flex-wrap:wrap}#special button{flex:1 0 20%;padding:12px 0}
 </style>
 </head>
 <body>
@@ -58,12 +66,18 @@ h1{font-size:26px;margin:0 0 6px}
 <section id="settings" class="page hidden">
   <h1>Einstellungen</h1>
   <div class="set"><span>Empfindlichkeit</span><span><button data-step="-0.5">–</button> <b class="val" id="sens"></b> <button data-step="0.5">+</button></span></div>
+  <div class="set"><span>Trackpad-Tempo</span><span><button data-tstep="-0.25">–</button> <b class="val" id="tspeed"></b> <button data-tstep="0.25">+</button></span></div>
   <label class="set"><span>Pointer nur solange gedrückt</span><input type="checkbox" id="hold" style="width:auto;margin:0"></label>
   <label class="set"><span>Horizontal umkehren</span><input type="checkbox" id="invX" style="width:auto;margin:0"></label>
   <label class="set"><span>Vertikal umkehren</span><input type="checkbox" id="invY" style="width:auto;margin:0"></label>
   <p class="muted">Handy wie eine Fernbedienung halten: Display nach oben, Oberkante zeigt zur Leinwand. Ohne Bewegungssensor: Taste halten und mit dem Finger ziehen.</p>
   <button class="primary" id="done">Fertig</button>
 </section>
+
+<nav class="tabs hidden" id="tabs">
+  <button data-tab="remote">Präsentation</button>
+  <button data-tab="track">Trackpad</button>
+</nav>
 
 <div id="motionBanner" class="banner hidden">
   <span id="motionText"></span>
@@ -86,6 +100,26 @@ h1{font-size:26px;margin:0 0 6px}
   </div>
 </main>
 
+<main id="track" class="hidden">
+  <div class="row mini">
+    <button class="pad laser" data-mode="laser">Laser<small class="hint"></small></button>
+    <button class="pad spot" data-mode="spotlight">Spotlight<small class="hint"></small></button>
+    <button class="pad prev" data-key="prev">‹</button>
+    <button class="pad next" data-key="next">›</button>
+  </div>
+  <div id="pad">Tippen = Klick · zwei Finger tippen = Rechtsklick<br>zwei Finger ziehen = Scrollen · lange drücken = Ziehen</div>
+  <div id="special" class="hidden">
+    <button data-key="escape">Esc</button><button data-key="tab">Tab</button><button data-key="backspace">⌫</button><button data-key="enter">↵</button>
+    <button data-key="left">←</button><button data-key="up">↑</button><button data-key="down">↓</button><button data-key="right">→</button>
+  </div>
+  <div class="row small">
+    <button id="lBtn">Links</button>
+    <button id="rBtn">Rechts</button>
+    <button id="kbdBtn">⌨︎ Tastatur</button>
+  </div>
+  <input id="kbd" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="enter">
+</main>
+
 <script>
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -100,7 +134,8 @@ if (params.get("k")) {
   history.replaceState(null, "", "/");
 }
 let key = store.get("lzspot.key", "");
-let settings = { sensitivity: 2.5, hold: true, invX: false, invY: false, ...store.get("lzspot.settings", {}) };
+let settings = { sensitivity: 2.5, trackSpeed: 1.5, hold: true, invX: false, invY: false, ...store.get("lzspot.settings", {}) };
+let tab = store.get("lzspot.tab", "remote");
 
 let ws = null, connected = false, mode = "off", motionOk = false;
 
@@ -119,7 +154,7 @@ function connect() {
   ws.onopen = () => send({ type: "hello", token: key, device: /iPhone|iPad/.test(navigator.userAgent) ? "iPhone (Browser)" : "Handy (Browser)" });
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
-    if (msg.type === "welcome") { connected = true; setStatus("Verbunden mit " + msg.host, true); show("remote"); }
+    if (msg.type === "welcome") { connected = true; setStatus("Verbunden mit " + msg.host, true); show(tab); }
     if (msg.type === "error") { key = ""; store.set("lzspot.key", ""); }
   };
   ws.onclose = () => {
@@ -131,9 +166,15 @@ function connect() {
 }
 
 function show(view) {
-  for (const id of ["login", "settings", "remote"]) $(id).classList.toggle("hidden", id !== view);
-  $("motionBanner").classList.toggle("hidden", view !== "remote" || motionOk || !$("motionText").textContent);
+  for (const id of ["login", "settings", "remote", "track"]) $(id).classList.toggle("hidden", id !== view);
+  const main = view === "remote" || view === "track";
+  $("tabs").classList.toggle("hidden", !main);
+  document.querySelectorAll("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === view));
+  $("motionBanner").classList.toggle("hidden", !main || motionOk || !$("motionText").textContent);
 }
+document.querySelectorAll("[data-tab]").forEach((b) =>
+  (b.onclick = () => { tab = b.dataset.tab; store.set("lzspot.tab", tab); show(tab); })
+);
 
 // ---------- motion ----------
 // Orientation deltas, as in the first prototype: alpha (compass) moves
@@ -234,6 +275,7 @@ $("codeGo").onclick = () => {
 };
 $("gear").onclick = () => {
   $("sens").textContent = settings.sensitivity.toFixed(1);
+  $("tspeed").textContent = settings.trackSpeed.toFixed(2);
   $("hold").checked = settings.hold;
   $("invX").checked = settings.invX;
   $("invY").checked = settings.invY;
@@ -245,13 +287,19 @@ document.querySelectorAll("[data-step]").forEach((b) =>
     $("sens").textContent = settings.sensitivity.toFixed(1);
   })
 );
+document.querySelectorAll("[data-tstep]").forEach((b) =>
+  (b.onclick = () => {
+    settings.trackSpeed = Math.round(Math.min(4, Math.max(0.5, settings.trackSpeed + Number(b.dataset.tstep))) * 100) / 100;
+    $("tspeed").textContent = settings.trackSpeed.toFixed(2);
+  })
+);
 $("done").onclick = () => {
   settings.hold = $("hold").checked;
   settings.invX = $("invX").checked;
   settings.invY = $("invY").checked;
   store.set("lzspot.settings", settings);
   renderHints();
-  show(key ? "remote" : "login");
+  show(key ? tab : "login");
 };
 
 // Keep the screen on while presenting (where supported).
@@ -263,10 +311,115 @@ document.addEventListener("visibilitychange", () => {
   else if (mode !== "off") setMode("off");
 });
 
+// ---------- trackpad ----------
+// One finger moves the mouse (with acceleration), tap = left click,
+// two-finger tap = right click, two fingers = scroll, long press = drag.
+const touches = new Map();
+let gesture = null, moveAcc = { x: 0, y: 0 }, scrollAcc = 0, raf = 0;
+
+function flush() {
+  raf = 0;
+  if (moveAcc.x || moveAcc.y) send({ type: "mouse", dx: moveAcc.x, dy: moveAcc.y });
+  if (scrollAcc) send({ type: "scroll", dy: scrollAcc });
+  moveAcc = { x: 0, y: 0 };
+  scrollAcc = 0;
+}
+const queue = () => { if (!raf) raf = requestAnimationFrame(flush); };
+
+const pad = $("pad");
+pad.addEventListener("pointerdown", (e) => {
+  pad.setPointerCapture(e.pointerId);
+  touches.set(e.pointerId, { x: e.clientX, y: e.clientY, t: performance.now() });
+  if (touches.size === 1) {
+    gesture = { start: performance.now(), moved: 0, fingers: 1, dragging: false };
+    gesture.hold = setTimeout(() => {
+      if (gesture && gesture.moved < 8 && touches.size === 1) {
+        gesture.dragging = true;
+        pad.classList.add("drag");
+        send({ type: "button", button: "left", phase: "down" });
+        if (navigator.vibrate) navigator.vibrate(20);
+      }
+    }, 450);
+  } else if (gesture) {
+    gesture.fingers = Math.max(gesture.fingers, touches.size);
+    clearTimeout(gesture.hold);
+  }
+});
+pad.addEventListener("pointermove", (e) => {
+  const t = touches.get(e.pointerId);
+  if (!t || !gesture) return;
+  const now = performance.now();
+  const dx = e.clientX - t.x, dy = e.clientY - t.y, dt = Math.max(1, now - t.t);
+  touches.set(e.pointerId, { x: e.clientX, y: e.clientY, t: now });
+  gesture.moved += Math.abs(dx) + Math.abs(dy);
+  if (touches.size >= 2) {
+    // Two fingers: average the vertical movement of both.
+    scrollAcc += (dy / touches.size) * 2;
+  } else {
+    const speed = Math.hypot(dx, dy) / dt; // px per ms
+    const f = settings.trackSpeed * (1 + Math.min(speed, 3) * 0.9);
+    moveAcc.x += dx * f;
+    moveAcc.y += dy * f;
+  }
+  queue();
+});
+function padUp(e) {
+  if (!touches.delete(e.pointerId) || !gesture) return;
+  if (touches.size > 0) return;
+  clearTimeout(gesture.hold);
+  const short = performance.now() - gesture.start < 260 && gesture.moved < 10;
+  if (gesture.dragging) send({ type: "button", button: "left", phase: "up" });
+  else if (short) send({ type: "button", button: gesture.fingers >= 2 ? "right" : "left", phase: "click" });
+  pad.classList.remove("drag");
+  gesture = null;
+}
+pad.addEventListener("pointerup", padUp);
+pad.addEventListener("pointercancel", padUp);
+
+for (const [id, b] of [["lBtn", "left"], ["rBtn", "right"]]) {
+  $(id).addEventListener("pointerdown", () => send({ type: "button", button: b, phase: "down" }));
+  $(id).addEventListener("pointerup", () => send({ type: "button", button: b, phase: "up" }));
+  $(id).addEventListener("pointercancel", () => send({ type: "button", button: b, phase: "up" }));
+}
+
+// ---------- keyboard ----------
+// The hidden field keeps a zero-width sentinel so Backspace always produces
+// an input event; each change is sent as typed text or Backspaces, which also
+// covers autocorrect and dictation replacing words.
+const SENT = "\u200B";
+const kbd = $("kbd");
+let prev = SENT;
+kbd.value = SENT;
+$("kbdBtn").onclick = () => {
+  kbd.value = prev = SENT;
+  kbd.focus();
+};
+kbd.addEventListener("focus", () => $("special").classList.remove("hidden"));
+kbd.addEventListener("blur", () => $("special").classList.add("hidden"));
+kbd.addEventListener("input", () => {
+  const cur = kbd.value;
+  let p = 0;
+  while (p < prev.length && p < cur.length && prev[p] === cur[p]) p++;
+  for (let i = 0; i < prev.length - p; i++) send({ type: "key", action: "backspace" });
+  const added = cur.slice(p).split(SENT).join("");
+  if (added) send({ type: "text", text: added });
+  if (!cur.startsWith(SENT) || cur.length > 200) kbd.value = SENT;
+  prev = kbd.value;
+});
+kbd.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    send({ type: "key", action: "enter" });
+    kbd.value = prev = SENT;
+  }
+});
+// Special keys keep the phone keyboard open.
+document.querySelectorAll("#special button").forEach((b) => b.addEventListener("pointerdown", (e) => e.preventDefault()));
+
 renderHints();
 setupMotion();
 keepAwake();
-show(key ? "remote" : "login");
+show(key ? tab : "login");
 connect();
 </script>
 </body>

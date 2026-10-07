@@ -42,6 +42,9 @@
 - **On top of every presentation.** PowerPoint, Keynote, Google Slides, PDF,
   a browser: the pointer is a transparent overlay that stays above full-screen
   apps and never takes focus away.
+- **Trackpad and keyboard.** A second tab turns the phone into a touchpad –
+  move, click, right-click, scroll, drag – and the phone keyboard types on the
+  computer. Laser, spotlight and slide keys stay on the same screen.
 - **Slide control included.** Next, previous, start, black screen, Esc — sent
   as keystrokes to the app in front.
 - **Pairing in seconds.** Scan the QR code shown on the computer, done. The
@@ -63,7 +66,7 @@
   </tr>
   <tr>
     <td width="50%" align="center"><img src="docs/screenshots/phone-remote.png" alt="Remote in the phone browser with Laser, Spotlight, previous and next buttons" width="240" /><br /><b>Remote in the phone browser</b></td>
-    <td width="50%" align="center"></td>
+    <td width="50%" align="center"><img src="docs/screenshots/phone-trackpad.png" alt="Trackpad tab with touch area, mouse buttons, keyboard and special keys" width="240" /><br /><b>Trackpad &amp; keyboard</b></td>
   </tr>
 </table>
 
@@ -86,10 +89,10 @@
 Download from [Releases](https://github.com/larszu/lz-spotlight-presenter/releases/latest):
 
 - **macOS** — `.dmg` (universal, Apple silicon and Intel). The app is not
-  notarised: on first launch right-click → *Open*. For slide keys allow
+  notarised: on first launch right-click → *Open*. For slide keys, trackpad and keyboard allow
   *System Settings → Privacy & Security → Accessibility* for
   **LZ Spotlight Presenter**; the app has a button that opens the setting.
-  Laser and spotlight work without it.
+  Typing asks once to control *System Events*. Laser and spotlight work without either.
 - **Windows** — `Setup.exe`. Allow *private networks* in the firewall prompt.
 
 ### Phone
@@ -112,6 +115,11 @@ npx expo start
 2. Scan it with the phone camera and open the link.
 3. Hold the phone like a remote: screen up, top edge towards the screen.
 4. Hold **Laser** or **Spotlight** and aim. The pointer starts in the centre.
+
+**Trackpad tab:** one finger moves the mouse, tap = click, two-finger tap =
+right click, two fingers = scroll, long press = drag. *⌨︎ Tastatur* opens the
+phone keyboard; what you type appears on the computer, with Esc, Tab, ⌫, ↵
+and arrow keys above it. Laser, spotlight and ‹ › work alongside.
 
 **Which QR code?** *Überall (Internet)* works from any network, including
 mobile data, and gives motion control in the browser. *Nur lokales Netz*
@@ -146,8 +154,8 @@ buttons ─ mode / key ──┼─▶ Wi-Fi ───▶├─ /api/...    Comp
                        └─▶ internet ─┤  (Cloudflare quick tunnel, https)
                                      ├─ overlay window: transparent, click-through,
                                      │  always on top, draws laser / spotlight
-                                     └─ keystrokes: osascript (macOS),
-                                        PowerShell keybd_event (Windows)
+                                     └─ keyboard + mouse: one helper process,
+                                        JXA/CGEvent (macOS), PowerShell SendInput (Windows)
 ```
 
 The tunnel uses [cloudflared](https://github.com/cloudflare/cloudflared),
@@ -161,7 +169,11 @@ JSON over WebSocket. The first message is `{"type":"hello","token":"<key>"}`, th
 |---|---|
 | `{"type":"mode","mode":"laser"\|"spotlight"\|"off"}` | show / hide the pointer |
 | `{"type":"move","dx":0.01,"dy":-0.004}` | move by a fraction of screen width / height |
-| `{"type":"key","action":"next"}` | `next`, `prev`, `black`, `white`, `escape`, `start` |
+| `{"type":"key","action":"next"}` | `next`, `prev`, `black`, `white`, `escape`, `start`, `enter`, `backspace`, `tab`, `space`, `left`, `right`, `up`, `down` |
+| `{"type":"mouse","dx":12,"dy":-4}` | move the mouse by pixels |
+| `{"type":"button","button":"left"\|"right","phase":"click"\|"down"\|"up"}` | mouse buttons |
+| `{"type":"scroll","dy":-30}` | scroll |
+| `{"type":"text","text":"Hallo"}` | type text |
 
 ## Build from source
 
