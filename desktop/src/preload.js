@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld("lz", {
   getState: () => ipcRenderer.invoke("get-state"),
   setDisplay: (id) => ipcRenderer.invoke("set-display", id),
   newToken: () => ipcRenderer.invoke("new-token"),
+  setQrMode: (m) => ipcRenderer.invoke("set-qr-mode", m),
   test: (msg) => ipcRenderer.invoke("test", msg),
   askAccessibility: () => ipcRenderer.invoke("ask-accessibility")
 });

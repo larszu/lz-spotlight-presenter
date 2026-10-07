@@ -22,12 +22,18 @@ button.primary{background:#1677ff}
 .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 code{background:#101012;padding:2px 6px;border-radius:5px;font-size:12px;word-break:break-all}
 label{display:block;margin-bottom:6px;color:#aaa}
+.seg{display:flex;gap:6px;margin-bottom:10px}.seg button{flex:1}.seg button.on{background:#1677ff}
+.qr img[src=""]{visibility:hidden}
 </style>
 </head>
 <body>
 <h1>LZ Spotlight Presenter</h1>
-<div class="sub">Handy-App öffnen und QR-Code scannen.</div>
+<div class="sub">QR-Code mit der Handy-Kamera scannen – die Fernbedienung öffnet sich im Browser.</div>
 
+<div class="seg">
+  <button id="mInternet">Überall (Internet)</button>
+  <button id="mLan">Nur lokales Netz</button>
+</div>
 <div class="card qr">
   <img id="qr" alt="QR-Code">
   <div>
@@ -37,6 +43,7 @@ label{display:block;margin-bottom:6px;color:#aaa}
     <div class="row"><button id="newToken">Neuer Code</button></div>
   </div>
 </div>
+<div class="card muted" id="netInfo"></div>
 
 <div class="card">
   <div id="clients" class="muted">Kein Handy verbunden.</div>
@@ -63,9 +70,19 @@ const $ = (id) => document.getElementById(id);
 let testTimer;
 
 function render(s) {
-  $("qr").src = s.qr;
+  $("qr").src = s.qr || "";
   $("token").textContent = s.token;
-  $("addr").textContent = s.ips.length ? s.ips.map((ip) => `${ip}:${s.port}`).join(" · ") : "Kein Netzwerk gefunden";
+  $("addr").textContent = s.ips.length ? s.ips.map((ip) => `${ip}:${s.port}`).join(" · ") : "Kein lokales Netz";
+  $("mInternet").classList.toggle("on", s.qrMode === "internet");
+  $("mLan").classList.toggle("on", s.qrMode === "lan");
+  const t = s.tunnel;
+  const tunnelText = t.status === "online" ? "Internet-Zugang aktiv – funktioniert auch über mobile Daten."
+    : t.status === "starting" ? "Internet-Zugang wird aufgebaut …"
+    : `Internet-Zugang nicht verfügbar${t.error ? ` (${t.error})` : ""}.`;
+  $("netInfo").innerHTML = (s.qrMode === "internet"
+    ? tunnelText + (s.shownMode === "lan" ? " Bis dahin zeigt der QR-Code die lokale Adresse." : "")
+    : "Handy muss im selben Netz sein. Bewegungssteuerung im Browser nur über „Überall“ – lokal steuert man Laser und Spotlight per Finger.")
+    + "<br><br>Kein gemeinsames WLAN? Den Computer mit dem Hotspot des Handys verbinden – per WLAN, USB oder Bluetooth.";
   $("api").textContent = `http://${s.ips[0] || "IP"}:${s.port}/api/next?token=${s.token}`;
   $("clients").innerHTML = s.clients.length
     ? `<span class="ok">● Verbunden:</span> ${s.clients.map((c) => c.replace(/</g, "&lt;")).join(", ")}`
@@ -89,6 +106,8 @@ function test(mode) {
 
 $("display").onchange = (e) => window.lz.setDisplay(e.target.value);
 $("newToken").onclick = () => window.lz.newToken();
+$("mInternet").onclick = () => window.lz.setQrMode("internet");
+$("mLan").onclick = () => window.lz.setQrMode("lan");
 $("tLaser").onclick = () => test("laser");
 $("tSpot").onclick = () => test("spotlight");
 window.lz.onState(render);

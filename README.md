@@ -9,7 +9,7 @@
 
 <p align="center">
   <b>Your phone as a presenter remote with laser pointer and spotlight, for macOS and Windows.</b><br />
-  Aim the phone, and the pointer moves on the screen. Free, local Wi-Fi, no extra hardware.
+  Scan the QR code, the remote opens in the phone's browser. No app, no extra hardware, any network.
 </p>
 
 <p align="center">
@@ -17,8 +17,8 @@
     <img src="https://img.shields.io/badge/Download-macOS%20%26%20Windows-1D324F?style=for-the-badge&logo=github&logoColor=white" alt="Download LZ Spotlight Presenter for macOS and Windows" height="40" />
   </a>
   &nbsp;
-  <a href="#phone-app">
-    <img src="https://img.shields.io/badge/Phone%20app-iOS%20%26%20Android-5C6B85?style=for-the-badge" alt="Phone app for iOS and Android" height="40" />
+  <a href="#phone">
+    <img src="https://img.shields.io/badge/Phone-any%20browser-5C6B85?style=for-the-badge" alt="Phone remote in any browser" height="40" />
   </a>
 </p>
 
@@ -30,8 +30,15 @@
 
 ## Why LZ Spotlight Presenter
 
-- **Point with the phone you already carry.** The gyroscope drives a laser dot
-  or a spotlight. No clicker or dongle to buy, nothing to charge.
+- **Point with the phone you already carry.** The motion sensor drives a laser
+  dot or a spotlight. No clicker or dongle to buy, nothing to charge.
+- **No app needed.** The QR code opens the remote in Safari or Chrome. An
+  optional iOS/Android app exists for the same controls.
+- **Works on any network.** The desktop app opens a free, encrypted Cloudflare
+  tunnel, so the phone connects over venue Wi-Fi, guest Wi-Fi or mobile data.
+  No VPN, no port forwarding, no account.
+- **Works offline too.** Connect the computer to the phone's hotspot (Wi-Fi,
+  USB or Bluetooth) and everything stays local.
 - **On top of every presentation.** PowerPoint, Keynote, Google Slides, PDF,
   a browser: the pointer is a transparent overlay that stays above full-screen
   apps and never takes focus away.
@@ -43,8 +50,9 @@
   and you can switch it to any other screen.
 - **Companion and Stream Deck.** Every command is also an HTTP GET for
   Bitfocus Companion's *Generic HTTP* module.
-- **Local and private.** Phone and computer talk directly over Wi-Fi. No
-  account, no cloud, no tracking. Free and open source.
+- **Private.** A new random link per pairing; links through the internet
+  carry a long secret, the short code only works on the local network. No
+  account, no tracking. Free and open source.
 
 ## Screenshots
 
@@ -54,8 +62,8 @@
     <td width="50%" align="center"><img src="docs/screenshots/desktop.png" alt="Desktop app with QR code, pairing code, screen selection and Companion URL" width="300" /><br /><b>Desktop app</b></td>
   </tr>
   <tr>
-    <td width="50%" align="center"><img src="docs/screenshots/phone-remote.png" alt="Phone remote with Laser, Spotlight, previous and next buttons" width="240" /><br /><b>Phone remote</b></td>
-    <td width="50%" align="center"><img src="docs/screenshots/phone-connect.png" alt="Phone pairing screen with QR scan and manual entry" width="240" /><br /><b>Pairing</b></td>
+    <td width="50%" align="center"><img src="docs/screenshots/phone-remote.png" alt="Remote in the phone browser with Laser, Spotlight, previous and next buttons" width="240" /><br /><b>Remote in the phone browser</b></td>
+    <td width="50%" align="center"></td>
   </tr>
 </table>
 
@@ -64,7 +72,8 @@
 | | **LZ Spotlight Presenter** | Logitech Spotlight | Presentation Pointer | Unified Remote |
 | --- | --- | --- | --- | --- |
 | Price | **Free, open source** | ~€100–130 (hardware) | ~$2 | Freemium |
-| Remote | **iOS + Android phone** | Dedicated clicker | iPhone | iOS + Android |
+| Remote | **Any phone browser, optional app** | Dedicated clicker | iPhone app | iOS + Android app |
+| Network | **Any: Wi-Fi, mobile data, hotspot** | USB receiver / Bluetooth | Same Wi-Fi | Same Wi-Fi / Bluetooth |
 | Computer | **macOS + Windows** | macOS + Windows | macOS | macOS + Windows + Linux |
 | Motion pointer | **Laser + spotlight** | Highlight, magnify, laser | Laser dot | Mouse only |
 | Slide control | **Yes** | Yes | Yes | Yes |
@@ -83,10 +92,13 @@ Download from [Releases](https://github.com/larszu/lz-spotlight-presenter/releas
   Laser and spotlight work without it.
 - **Windows** — `Setup.exe`. Allow *private networks* in the firewall prompt.
 
-### Phone app
+### Phone
 
-Until the app is in the App Store and Play Store, run it with
-[Expo Go](https://expo.dev/go):
+Nothing to install: scan the QR code with the camera, the remote opens in the
+browser. On iPhone allow the motion sensor once when asked.
+
+Optional app (same controls, works on the local network without internet):
+run it with [Expo Go](https://expo.dev/go) until it is in the stores:
 
 ```bash
 cd mobile
@@ -94,19 +106,25 @@ npm install
 npx expo start
 ```
 
-Scan the QR code in the terminal with the iPhone camera (Android: with Expo Go).
-Phone and computer must be on the same Wi-Fi.
-
 ## Usage
 
-1. Start the desktop app. It shows a QR code and a 6-digit code.
-2. In the phone app tap **QR-Code scannen** and scan the code. Scanning with
-   the system camera opens a pairing page with the same details.
+1. Start the desktop app. It shows a QR code.
+2. Scan it with the phone camera and open the link.
 3. Hold the phone like a remote: screen up, top edge towards the screen.
 4. Hold **Laser** or **Spotlight** and aim. The pointer starts in the centre.
 
-Phone settings: sensitivity, invert axes, hold-to-point or tap-to-toggle.
-*Neuer Code* on the desktop disconnects all phones.
+**Which QR code?** *Überall (Internet)* works from any network, including
+mobile data, and gives motion control in the browser. *Nur lokales Netz*
+needs phone and computer in the same network and no internet; in the browser
+you then steer laser and spotlight with the finger (hold the button and
+drag), the app also uses motion.
+
+**No shared Wi-Fi and no internet?** Turn on the phone's hotspot and connect
+the computer to it – via Wi-Fi, USB cable or Bluetooth – then use
+*Nur lokales Netz*.
+
+Settings on the phone (⚙︎): sensitivity, invert axes, hold-to-point or
+tap-to-toggle. *Neuer Code* on the desktop makes all old links invalid.
 
 ### Companion / Stream Deck
 
@@ -114,19 +132,30 @@ Phone settings: sensitivity, invert axes, hold-to-point or tap-to-toggle.
 http://<computer-ip>:8787/api/<command>?token=<code>
 ```
 
+The 6-digit code works on the local network only.
+
 Commands: `next`, `prev`, `black`, `white`, `escape`, `start`, `laser`, `spotlight`, `off`.
 
 ## How it works
 
 ```
-Phone app (Expo)                     Desktop app (Electron)
-gyroscope ─ move {dx,dy} ─┐          ┌─ overlay window: transparent, click-through,
-buttons ── mode / key ────┼─ WS ────▶│  always on top, draws laser / spotlight
-                          │  :8787   └─ keystrokes: osascript (macOS),
-Companion ── HTTP GET ────┘             PowerShell keybd_event (Windows)
+Phone browser / app                  Desktop app (Electron, port 8787)
+                                     ┌─ GET /       browser remote
+motion ─ move {dx,dy} ─┐             ├─ WebSocket   commands
+buttons ─ mode / key ──┼─▶ Wi-Fi ───▶├─ /api/...    Companion
+                       └─▶ internet ─┤  (Cloudflare quick tunnel, https)
+                                     ├─ overlay window: transparent, click-through,
+                                     │  always on top, draws laser / spotlight
+                                     └─ keystrokes: osascript (macOS),
+                                        PowerShell keybd_event (Windows)
 ```
 
-JSON over WebSocket. The first message is `{"type":"hello","token":"123456"}`, then:
+The tunnel uses [cloudflared](https://github.com/cloudflare/cloudflared),
+downloaded once on first start. HTTPS is also what lets the phone browser read
+the motion sensor. Tailscale and other VPN addresses are not offered, because
+the phone in the room is not on them.
+
+JSON over WebSocket. The first message is `{"type":"hello","token":"<key>"}`, then:
 
 | Message | Meaning |
 |---|---|
@@ -156,8 +185,8 @@ installers and attaches them to the release. Store builds of the phone app:
 `npx eas-cli@latest build --platform ios|android`.
 
 ```
-desktop/   Electron app: server, overlay, keystrokes, pairing window
-mobile/    Expo app (iOS + Android): pairing, remote, settings
+desktop/   Electron app: server, browser remote, tunnel, overlay, keystrokes
+mobile/    optional Expo app (iOS + Android)
 ```
 
 Built with Electron, Expo, React Native, TypeScript and ws. MIT licence.
