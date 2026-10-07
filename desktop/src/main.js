@@ -3,14 +3,18 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const QRCode = require("qrcode");
-const { createPointer, applyMove, setMode, randomToken } = require("./state");
+const { createPointer, applyMove, setMode, randomToken, randomSecret } = require("./state");
+const { lanAddresses } = require("./net");
+const { startTunnel } = require("./tunnel");
 const { startServer } = require("./server");
 const { sendKey, stopKeys } = require("./keys");
 
 const PORT = 8787;
 const configPath = () => path.join(app.getPath("userData"), "config.json");
 
-let config = { token: randomToken(), displayId: null };
+let config = { token: randomToken(), secret: randomSecret(), displayId: null, qrMode: "internet" };
+let tunnel = { status: "starting" };
+let tunnelCtl = null;
 let controlWin = null;
 let overlayWin = null;
 let server = null;
@@ -20,22 +24,13 @@ const pointer = createPointer();
 function loadConfig() {
   try {
     config = { ...config, ...JSON.parse(fs.readFileSync(configPath(), "utf8")) };
-  } catch {
-    saveConfig();
-  }
+  } catch {}
+  saveConfig();
 }
 
 function saveConfig() {
   fs.mkdirSync(path.dirname(configPath()), { recursive: true });
   fs.writeFileSync(configPath(), JSON.stringify(config, null, 2));
-}
-
-function lanAddresses() {
-  const out = [];
-  for (const list of Object.values(os.networkInterfaces())) {
-    for (const a of list || []) if (a.family === "IPv4" && !a.internal) out.push(a.address);
-  }
-  return out;
 }
 
 function targetDisplay() {
@@ -96,15 +91,20 @@ function handleMessage(msg) {
 }
 
 async function controlState() {
-  const ips = lanAddresses();
-  const host = ips[0] || "127.0.0.1";
-  // Plain http so the iPhone/Android camera opens it too; the app scanner reads it directly.
-  const link = `http://${host}:${PORT}/pair?token=${config.token}&name=${encodeURIComponent(os.hostname())}`;
+  const ips = lanAddresses(os.networkInterfaces());
+  const lanUrl = ips.length ? `http://${ips[0]}:${PORT}/?k=${config.token}` : null;
+  const netUrl = tunnel.status === "online" ? `${tunnel.url}/?k=${config.secret}` : null;
+  const mode = config.qrMode === "internet" && netUrl ? "internet" : "lan";
+  const link = mode === "internet" ? netUrl : lanUrl;
   return {
     ips,
     port: PORT,
     token: config.token,
-    qr: await QRCode.toDataURL(link, { margin: 1, width: 280 }),
+    qrMode: config.qrMode,
+    shownMode: mode,
+    tunnel,
+    link,
+    qr: link ? await QRCode.toDataURL(link, { margin: 1, width: 280 }) : null,
     clients,
     displays: screen.getAllDisplays().map((d, i) => ({
       id: d.id,
@@ -143,8 +143,14 @@ ipcMain.handle("set-display", (_e, id) => {
 });
 ipcMain.handle("new-token", () => {
   config.token = randomToken();
+  config.secret = randomSecret();
   saveConfig();
   server.kickAll();
+  refreshControl();
+});
+ipcMain.handle("set-qr-mode", (_e, mode) => {
+  config.qrMode = mode === "lan" ? "lan" : "internet";
+  saveConfig();
   refreshControl();
 });
 ipcMain.handle("test", (_e, msg) => handleMessage(msg));
@@ -161,7 +167,7 @@ app.whenReady().then(() => {
   loadConfig();
   server = startServer({
     port: PORT,
-    getToken: () => config.token,
+    getKeys: () => ({ code: config.token, secret: config.secret }),
     onMessage: handleMessage,
     onClients: (list) => {
       clients = list;
@@ -173,6 +179,14 @@ app.whenReady().then(() => {
     }
   });
   server.server.on("error", (err) => console.error("[server]", err.message));
+  tunnelCtl = startTunnel({
+    dir: path.join(app.getPath("userData"), "bin"),
+    port: PORT,
+    onChange: (t) => {
+      tunnel = t;
+      refreshControl();
+    }
+  });
   createOverlay();
   createControl();
   for (const ev of ["display-added", "display-removed", "display-metrics-changed"]) {
@@ -185,4 +199,7 @@ app.whenReady().then(() => {
   setInterval(refreshControl, 3000);
 });
 
-app.on("before-quit", stopKeys);
+app.on("before-quit", () => {
+  stopKeys();
+  if (tunnelCtl) tunnelCtl.stop();
+});

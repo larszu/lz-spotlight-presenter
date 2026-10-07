@@ -1,12 +1,13 @@
 import test from "node:test";
 import assert from "node:assert";
-import { parseLink, motionDelta } from "../src/link.ts";
+import { parseLink, motionDelta, socketUrl } from "../src/link.ts";
 
 test("parses the desktop QR link", () => {
   assert.deepStrictEqual(parseLink("lzspot://connect?host=192.168.0.134&port=8787&token=757604&name=MBP%20Lars"), {
     host: "192.168.0.134",
     port: 8787,
     token: "757604",
+    secure: undefined,
     name: "MBP Lars"
   });
 });
@@ -16,8 +17,23 @@ test("parses the http link the system camera also understands", () => {
     host: "192.168.0.134",
     port: 8787,
     token: "757604",
+    secure: undefined,
     name: "MBP"
   });
+});
+
+test("parses the internet and local QR codes", () => {
+  const net = parseLink("https://composed-papua-patch-lean.trycloudflare.com/?k=Ab3_x-9QzLkW2mN8pR4sT6uV");
+  assert.deepStrictEqual(net, {
+    host: "composed-papua-patch-lean.trycloudflare.com",
+    port: 443,
+    token: "Ab3_x-9QzLkW2mN8pR4sT6uV",
+    secure: true,
+    name: undefined
+  });
+  assert.strictEqual(socketUrl(net!), "wss://composed-papua-patch-lean.trycloudflare.com:443");
+  const lan = parseLink("http://192.168.0.134:8787/?k=757604");
+  assert.strictEqual(socketUrl(lan!), "ws://192.168.0.134:8787");
 });
 
 test("rejects foreign or broken codes", () => {

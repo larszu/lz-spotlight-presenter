@@ -7,7 +7,7 @@ import { Gyroscope } from "expo-sensors";
 import { useKeepAwake } from "expo-keep-awake";
 import * as Haptics from "expo-haptics";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { DEFAULT_PORT, MotionSettings, Target, motionDelta, parseLink } from "./src/link";
+import { DEFAULT_PORT, MotionSettings, Target, motionDelta, parseLink, socketUrl } from "./src/link";
 
 type Status = "connecting" | "connected" | "badtoken" | "offline";
 type Mode = "off" | "laser" | "spotlight";
@@ -147,7 +147,7 @@ function useConnection(target: Target) {
 
     const open = () => {
       setStatus((s) => (s === "connected" ? "connecting" : s));
-      const sock = new WebSocket(`ws://${target.host}:${target.port}`);
+      const sock = new WebSocket(socketUrl(target));
       ws.current = sock;
       sock.onopen = () =>
         sock.send(JSON.stringify({ type: "hello", token: target.token, device: Platform.OS === "ios" ? "iPhone" : "Android" }));

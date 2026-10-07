@@ -46,4 +46,17 @@ function randomToken() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
-module.exports = { MODES, ACTIONS, createPointer, applyMove, setMode, parseMessage, randomToken };
+// Long secret for links that travel through the internet tunnel; the short
+// code is for typing on the local network only.
+function randomSecret() {
+  return require("crypto").randomBytes(18).toString("base64url");
+}
+
+function isAuthorized(given, { code, secret }, viaInternet) {
+  given = String(given || "");
+  if (!given) return false;
+  if (given === secret) return true;
+  return !viaInternet && given === code;
+}
+
+module.exports = { MODES, ACTIONS, createPointer, applyMove, setMode, parseMessage, randomToken, randomSecret, isAuthorized };
