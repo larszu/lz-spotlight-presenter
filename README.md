@@ -23,6 +23,10 @@
 </p>
 
 <p align="center">
+  <img src="docs/demo.gif" alt="Animation: the remote aims a laser over a slide, then a spotlight, then switches to the next slide" width="860" />
+</p>
+
+<p align="center">
   <img src="docs/screenshots/hero.png" alt="Spotlight from the phone over a presentation slide: the screen is dimmed, a bright circle highlights one figure" width="860" />
 </p>
 
@@ -50,6 +54,8 @@
 - **Hardware remote.** An ESP32 with a gyro and buttons works instead of the
   phone – with a touch screen on the Waveshare ESP32-S3 AMOLED 1.8, see
   [`esp32/`](esp32/README.md).
+
+  <img src="docs/screenshots/esp32-remote.jpg" alt="Rendering of the ESP32 remote: navy body, AMOLED touch screen with mode tabs, red aim button and click button" width="560" />
 - **Slide control included.** Next, previous, start, black screen, Esc — sent
   as keystrokes to the app in front.
 - **Pairing in seconds.** Scan the QR code shown on the computer, done. The
@@ -206,6 +212,7 @@ installers and attaches them to the release. Store builds of the phone app:
 `npx eas-cli@latest build --platform ios|android`.
 
 ```
+docs/      screenshots, demo animation (HyperFrames) and remote rendering (Blender)
 desktop/   Electron app: server, browser remote, tunnel, overlay, keystrokes
 mobile/    optional Expo app (iOS + Android)
 esp32/     firmware for the ESP32 hardware remote

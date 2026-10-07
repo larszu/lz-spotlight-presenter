@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1280, height=720" />
+<title>LZ Spotlight Presenter</title>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<style>
+  body { margin: 0; background: #0b0d12; font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; color: #fff; }
+  #root { position: relative; width: 1280px; height: 720px; overflow: hidden;
+    background: radial-gradient(1200px 700px at 30% 40%, #18233a 0%, #0b0d12 60%); }
+  .clip { position: absolute; inset: 0; }
+  /* intro */
+  #intro { display: grid; place-content: center; text-align: center; }
+  #intro h1 { margin: 0; font-size: 76px; letter-spacing: -1.5px; }
+  #intro p { margin: 18px 0 0; font-size: 26px; color: #a9b4c8; }
+  /* stage */
+  #remote { position: absolute; left: -40px; top: 110px; width: 640px; border-radius: 22px;
+    box-shadow: 0 30px 80px rgba(0,0,0,.55); }
+  #screen { position: absolute; left: 560px; top: 120px; width: 680px; height: 382px; border-radius: 14px;
+    background: #f4f1ea; color: #1d324f; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+  .slide { position: absolute; inset: 0; padding: 48px 50px; box-sizing: border-box; }
+  .kicker { font-size: 15px; letter-spacing: 3px; color: #5c6b85; }
+  .slide h2 { font-size: 44px; margin: 10px 0 26px; }
+  .cards { display: flex; gap: 16px; }
+  .card { flex: 1; background: #fff; border-radius: 12px; padding: 18px; }
+  .card b { display: block; font-size: 40px; }
+  .card span { font-size: 15px; color: #5c6b85; }
+  .card.dark { background: #1d324f; color: #fff; } .card.dark span { color: #b9c3d6; }
+  #slide2 { display: grid; place-content: center; text-align: center; }
+  #slide2 h2 { font-size: 58px; margin: 0; }
+  #laser { position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: #fff;
+    box-shadow: 0 0 10px 6px rgba(255,40,40,.95), 0 0 34px 16px rgba(255,0,0,.55); opacity: 0; left: 0; top: 0; }
+  #spot { position: absolute; inset: 0; opacity: 0; --x: 560px; --y: 300px;
+    background: radial-gradient(circle at var(--x) var(--y), rgba(0,0,0,0) 0 92px, rgba(0,0,0,.78) 112px); }
+  .chip { position: absolute; left: 560px; top: 528px; padding: 10px 18px; border-radius: 999px; font-size: 20px;
+    font-weight: 600; opacity: 0; }
+  #chipLaser { background: #c62828; } #chipSpot { background: #f5a623; color: #111; } #chipNext { background: #1677ff; }
+  #outro { display: grid; place-content: center; text-align: center; opacity: 0; background: #0b0d12; }
+  #outro h3 { margin: 0; font-size: 54px; }
+  #outro p { margin: 18px 0 0; font-size: 24px; color: #a9b4c8; }
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="main" data-start="0" data-width="1280" data-height="720" data-duration="11">
+  <section id="intro" class="clip" data-start="0" data-duration="2.2">
+    <h1 id="t1">LZ Spotlight Presenter</h1>
+    <p id="t2">Laser, spotlight and mouse – from your phone or an ESP32 remote</p>
+  </section>
+
+  <section id="stage" class="clip" data-start="1.8" data-duration="9.2">
+    <img id="remote" src="remote.png" alt="" />
+    <div id="screen">
+      <div id="slide1" class="slide">
+        <div class="kicker">Q3 · LIVE PRODUCTION</div>
+        <h2>Signal flow on site</h2>
+        <div class="cards">
+          <div class="card"><b>12</b><span>cameras</span></div>
+          <div class="card dark"><b>4K</b><span>SDI backbone</span></div>
+          <div class="card"><b>0</b><span>dropped frames</span></div>
+        </div>
+      </div>
+      <div id="slide2" class="slide"><h2>Thank you!</h2><p class="kicker" style="margin-top:16px">QUESTIONS?</p></div>
+      <div id="spot"></div>
+      <div id="laser"></div>
+    </div>
+    <div id="chipLaser" class="chip">Laser – aim with the remote</div>
+    <div id="chipSpot" class="chip">Spotlight</div>
+    <div id="chipNext" class="chip">› Next slide</div>
+  </section>
+
+  <section id="outro" class="clip" data-start="9.4" data-duration="1.6">
+    <h3>Free &amp; open source</h3>
+    <p>macOS · Windows · iPhone · Android · ESP32<br/>github.com/larszu/lz-spotlight-presenter</p>
+  </section>
+</div>
+<script>
+  const tl = gsap.timeline({ paused: true });
+  // Intro
+  tl.from("#t1", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 0.15)
+    .from("#t2", { y: 24, opacity: 0, duration: 0.6, ease: "power3.out" }, 0.45)
+    .to("#intro", { opacity: 0, duration: 0.4 }, 1.8);
+  // Stage in
+  tl.from("#remote", { x: -120, opacity: 0, duration: 0.8, ease: "power3.out" }, 1.9)
+    .from("#screen", { x: 120, opacity: 0, duration: 0.8, ease: "power3.out" }, 2.0);
+  // Laser: appears in the centre, sweeps over the title, lands on "4K"
+  tl.to("#chipLaser", { opacity: 1, y: -6, duration: 0.3 }, 2.8)
+    .fromTo("#laser", { x: 340, y: 190 }, { opacity: 1, duration: 0.2 }, 2.9)
+    .to("#laser", { x: 90, y: 118, duration: 0.7, ease: "sine.inOut" }, 3.1)
+    .to("#laser", { x: 410, y: 118, duration: 0.8, ease: "sine.inOut" }, 3.8)
+    .to("#laser", { x: 300, y: 268, duration: 0.6, ease: "sine.inOut" }, 4.6)
+    .to(["#laser", "#chipLaser"], { opacity: 0, duration: 0.25 }, 5.3);
+  // Spotlight on "0 dropped frames"
+  tl.to("#chipSpot", { opacity: 1, y: -6, duration: 0.3 }, 5.5)
+    .fromTo("#spot", { "--x": "340px", "--y": "190px" }, { opacity: 1, duration: 0.35 }, 5.6)
+    .to("#spot", { "--x": "560px", "--y": "272px", duration: 1.0, ease: "power2.inOut" }, 6.0)
+    .to(["#spot", "#chipSpot"], { opacity: 0, duration: 0.3 }, 7.4);
+  // Next slide
+  tl.to("#chipNext", { opacity: 1, y: -6, duration: 0.25 }, 7.7)
+    .to("#slide1", { xPercent: -100, duration: 0.6, ease: "power3.inOut" }, 8.0)
+    .fromTo("#slide2", { xPercent: 100 }, { xPercent: 0, duration: 0.6, ease: "power3.inOut", immediateRender: true }, 8.0)
+    .to("#chipNext", { opacity: 0, duration: 0.25 }, 9.0);
+  // Outro
+  tl.to("#outro", { opacity: 1, duration: 0.5 }, 9.4)
+    .from("#outro h3", { y: 30, duration: 0.6, ease: "power3.out" }, 9.45);
+  window.__timelines["main"] = tl;
+</script>
+</body>
+</html>
