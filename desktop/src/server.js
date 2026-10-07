@@ -13,7 +13,7 @@ const { ACTIONS, parseMessage, isAuthorized } = require("./state");
 // count as authorised with the long secret.
 const viaInternet = (req) => Boolean(req.headers["cf-connecting-ip"]);
 
-function startServer({ port, getKeys, onMessage, onClients }) {
+function startServer({ port, getKeys, getStatus = () => ({}), onMessage, onClients }) {
   const remoteHtml = fs.readFileSync(path.join(__dirname, "remote.html"));
 
   const server = http.createServer((req, res) => {
@@ -39,7 +39,7 @@ function startServer({ port, getKeys, onMessage, onClients }) {
     }
     const cmd = match[1];
     if (ACTIONS.includes(cmd)) onMessage({ type: "key", action: cmd });
-    else if (["laser", "spotlight", "off"].includes(cmd)) onMessage({ type: "mode", mode: cmd });
+    else if (["laser", "spotlight", "mouse", "off"].includes(cmd)) onMessage({ type: "mode", mode: cmd });
     else {
       res.writeHead(404).end("unknown command");
       return;
@@ -65,7 +65,7 @@ function startServer({ port, getKeys, onMessage, onClients }) {
           clearTimeout(kick);
           clients.add(socket);
           socket.deviceName = String(msg.device || "Handy").slice(0, 60) + (internet ? " (Internet)" : "");
-          socket.send(JSON.stringify({ type: "welcome", host: os.hostname() }));
+          socket.send(JSON.stringify({ type: "welcome", host: os.hostname(), ...getStatus() }));
           onClients(list());
         } else {
           socket.send(JSON.stringify({ type: "error", reason: "token" }));
@@ -87,6 +87,10 @@ function startServer({ port, getKeys, onMessage, onClients }) {
   server.listen(port, "0.0.0.0");
   return {
     server,
+    broadcast(msg) {
+      const data = JSON.stringify(msg);
+      for (const c of clients) c.send(data);
+    },
     kickAll() {
       for (const c of clients) c.close(4003, "token changed");
     }

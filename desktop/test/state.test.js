@@ -36,3 +36,9 @@ test("invalid input is rejected", () => {
   assert.strictEqual(parseMessage('{"a":1}'), null);
   assert.deepStrictEqual(parseMessage('{"type":"key"}'), { type: "key" });
 });
+
+test("mouse mode is a valid pointer mode", () => {
+  const p = createPointer();
+  setMode(p, "mouse");
+  assert.strictEqual(p.mode, "mouse");
+});

@@ -42,6 +42,8 @@
 - **On top of every presentation.** PowerPoint, Keynote, Google Slides, PDF,
   a browser: the pointer is a transparent overlay that stays above full-screen
   apps and never takes focus away.
+- **Air mouse.** *Maus* works like the laser, but moves the real mouse
+  cursor – aim at a link or a video and tap to click.
 - **Trackpad and keyboard.** A second tab turns the phone into a touchpad –
   move, click, right-click, scroll, drag – and the phone keyboard types on the
   computer. Laser, spotlight and slide keys stay on the same screen.
@@ -93,6 +95,9 @@ Download from [Releases](https://github.com/larszu/lz-spotlight-presenter/releas
   *System Settings → Privacy & Security → Accessibility* for
   **LZ Spotlight Presenter**; the app has a button that opens the setting.
   Typing asks once to control *System Events*. Laser and spotlight work without either.
+  The app is unsigned, so macOS forgets this permission after every update
+  while the switch still looks on: remove the entry with “–”, restart the app
+  and allow it again. The phone shows a notice when this is needed.
 - **Windows** — `Setup.exe`. Allow *private networks* in the firewall prompt.
 
 ### Phone
@@ -114,7 +119,8 @@ npx expo start
 1. Start the desktop app. It shows a QR code.
 2. Scan it with the phone camera and open the link.
 3. Hold the phone like a remote: screen up, top edge towards the screen.
-4. Hold **Laser** or **Spotlight** and aim. The pointer starts in the centre.
+4. Hold **Laser**, **Spotlight** or **Maus** and aim. Laser and spotlight start
+   in the centre; *Maus* moves the real mouse cursor from where it is.
 
 **Trackpad tab:** one finger moves the mouse, tap = click, two-finger tap =
 right click, two fingers = scroll, long press = drag. *⌨︎ Tastatur* opens the
@@ -142,7 +148,7 @@ http://<computer-ip>:8787/api/<command>?token=<code>
 
 The 6-digit code works on the local network only.
 
-Commands: `next`, `prev`, `black`, `white`, `escape`, `start`, `laser`, `spotlight`, `off`.
+Commands: `next`, `prev`, `black`, `white`, `escape`, `start`, `laser`, `spotlight`, `mouse`, `off`.
 
 ## How it works
 
@@ -167,7 +173,7 @@ JSON over WebSocket. The first message is `{"type":"hello","token":"<key>"}`, th
 
 | Message | Meaning |
 |---|---|
-| `{"type":"mode","mode":"laser"\|"spotlight"\|"off"}` | show / hide the pointer |
+| `{"type":"mode","mode":"laser"\|"spotlight"\|"mouse"\|"off"}` | show / hide the pointer; `mouse` moves the system cursor |
 | `{"type":"move","dx":0.01,"dy":-0.004}` | move by a fraction of screen width / height |
 | `{"type":"key","action":"next"}` | `next`, `prev`, `black`, `white`, `escape`, `start`, `enter`, `backspace`, `tab`, `space`, `left`, `right`, `up`, `down` |
 | `{"type":"mouse","dx":12,"dy":-4}` | move the mouse by pixels |
