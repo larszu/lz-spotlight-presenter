@@ -6,6 +6,7 @@ const QRCode = require("qrcode");
 const { createPointer, applyMove, setMode, randomToken, randomSecret } = require("./state");
 const { lanAddresses } = require("./net");
 const { startTunnel } = require("./tunnel");
+const { Bonjour } = require("bonjour-service");
 const { startServer } = require("./server");
 const input = require("./input");
 
@@ -15,6 +16,7 @@ const configPath = () => path.join(app.getPath("userData"), "config.json");
 let config = { token: randomToken(), secret: randomSecret(), displayId: null, qrMode: "internet" };
 let tunnel = { status: "starting" };
 let tunnelCtl = null;
+let bonjour = null;
 let controlWin = null;
 let overlayWin = null;
 let server = null;
@@ -224,6 +226,13 @@ app.whenReady().then(() => {
     }
   });
   server.server.on("error", (err) => console.error("[server]", err.message));
+  // Lets hardware remotes (ESP32) find this computer without typing an IP.
+  try {
+    bonjour = new Bonjour();
+    bonjour.publish({ name: `LZ Spotlight ${os.hostname()}`, type: "lzspot", port: PORT });
+  } catch (err) {
+    console.error("[mdns]", err.message);
+  }
   tunnelCtl = startTunnel({
     dir: path.join(app.getPath("userData"), "bin"),
     port: PORT,
@@ -252,4 +261,5 @@ app.whenReady().then(() => {
 app.on("before-quit", () => {
   input.stopInput();
   if (tunnelCtl) tunnelCtl.stop();
+  if (bonjour) bonjour.unpublishAll(() => bonjour.destroy());
 });

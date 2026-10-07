@@ -47,6 +47,9 @@
 - **Trackpad and keyboard.** A second tab turns the phone into a touchpad –
   move, click, right-click, scroll, drag – and the phone keyboard types on the
   computer. Laser, spotlight and slide keys stay on the same screen.
+- **Hardware remote.** An ESP32 with a gyro and buttons works instead of the
+  phone – with a touch screen on the Waveshare ESP32-S3 AMOLED 1.8, see
+  [`esp32/`](esp32/README.md).
 - **Slide control included.** Next, previous, start, black screen, Esc — sent
   as keystrokes to the app in front.
 - **Pairing in seconds.** Scan the QR code shown on the computer, done. The
@@ -205,6 +208,7 @@ installers and attaches them to the release. Store builds of the phone app:
 ```
 desktop/   Electron app: server, browser remote, tunnel, overlay, keystrokes
 mobile/    optional Expo app (iOS + Android)
+esp32/     firmware for the ESP32 hardware remote
 ```
 
 Built with Electron, Expo, React Native, TypeScript and ws. MIT licence.
