@@ -100,7 +100,10 @@ public static class LZInput {
     [FieldOffset(8)] public KEYBDINPUT ki;
   }
   [DllImport("user32.dll", SetLastError = true)] static extern uint SendInput(uint n, INPUT[] inputs, int size);
-  static void Send(INPUT i) { SendInput(1, new[] { i }, Marshal.SizeOf(typeof(INPUT))); }
+  static void Send(INPUT i) {
+    if (SendInput(1, new[] { i }, Marshal.SizeOf(typeof(INPUT))) == 0)
+      Console.Error.WriteLine("SendInput failed: " + Marshal.GetLastWin32Error() + " size=" + Marshal.SizeOf(typeof(INPUT)));
+  }
   public static void Mouse(uint flags, int dx, int dy, int data) {
     var i = new INPUT { type = 0 }; i.mi.dx = dx; i.mi.dy = dy; i.mi.flags = flags; i.mi.data = (uint)data; Send(i);
   }
@@ -155,7 +158,7 @@ function start() {
     return null;
   }
   helper.stderr.on("data", (d) => {
-    lastError = String(d).trim();
+    lastError = (lastError + String(d)).slice(-2000).trim();
     console.error("[input]", lastError);
   });
   helper.stdin.on("error", () => {});
