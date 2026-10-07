@@ -1,5 +1,7 @@
 # LZ Spotlight hardware remote (ESP32)
 
+<p align="center"><img src="../docs/screenshots/esp32-remote.jpg" alt="Rendering of the ESP32 remote" width="640" /></p>
+
 An ESP32 with a gyro instead of the phone: aim with the button held, the
 laser, spotlight or mouse follows. It joins the Wi-Fi and talks to the desktop
 app exactly like the phone.
